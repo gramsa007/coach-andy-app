@@ -17,7 +17,7 @@ import {
   CheckSquare,
   AlertTriangle,
   X,
-  Save as SaveIcon,
+  Save,
   CalendarDays,
   Cloud,
   Database,
