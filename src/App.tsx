@@ -1658,7 +1658,6 @@ function App() {
         onClose={() => setShowPastePlanModal(false)}
         onImport={handlePasteImport}
       />
-  
         isOpen={false} // Modal wird nicht direkt gerendert, da Buttons jetzt inline
         onClose={() => {}}
         onExport={handleExport}
