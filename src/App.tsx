@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // KONFIGURATION
 // ---------------------------------------------------------
 // Hier deinen API Key einfügen (oder via process.env nutzen)
-const API_KEY = "DEIN_API_KEY_HIER"; 
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
 
 // Definition der Benutzereinstellungen
 type UserSettings = {
