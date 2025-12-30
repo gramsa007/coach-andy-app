@@ -143,7 +143,12 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-32">
+  <div className="min-h-screen bg-slate-200 flex justify-center items-start md:py-8 font-sans">
+    {/* Dies ist das "Smartphone-Gehäuse" am PC */}
+    <div className="w-full max-w-md min-h-screen md:min-h-[850px] md:max-h-[90vh] bg-slate-50 shadow-2xl relative overflow-y-auto md:rounded-[3rem] border-x border-gray-200 flex flex-col">
+      
+      {/* Dein bisheriger Inhalt ab hier */}
+      <div className="flex-1 pb-32">
       <PromptModal isOpen={activeModal === 'system'} onClose={() => setActiveModal(null)} title="Coach Andy Philosophie" icon={FileText} currentPrompt={DEFAULT_SYSTEM_PROMPT} onSave={() => {}} colorClass="bg-blue-600" />
       <PromptModal isOpen={activeModal === 'plan'} onClose={() => setActiveModal(null)} title="KI Plan Generator" icon={Sparkles} currentPrompt={DEFAULT_PLAN_PROMPT} onSave={() => {}} colorClass="bg-indigo-600" />
       <EquipmentModal isOpen={activeModal === 'equipment'} onClose={() => setActiveModal(null)} equipment={equipment} onSave={setEquipment} />
