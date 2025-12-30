@@ -17,7 +17,6 @@ import {
   CheckSquare,
   AlertTriangle,
   X,
-  Save as SaveIcon,
   CalendarDays,
   Cloud,
   Database,
@@ -28,492 +27,271 @@ import {
   FileText,
   Copy,
   Check,
-  Edit, 
+  Edit,
   RotateCcw,
   Package,
-  Plus, 
+  Plus,
   Minus,
   Zap,
   Wind,
   Sparkles,
-  ClipboardCheck
+  ClipboardCheck,
 } from 'lucide-react';
 
-// --- STANDARD PROMPTS ---
-const DEFAULT_SYSTEM_PROMPT = `Du bist Coach Andy, ein erfahrener Hyrox- und Fitness-Coach.
-Deine Philosophie:
-1. Hyrox besteht zu 50% aus Laufen und zu 50% aus funktionaler Kraft.
-2. Konsistenz schlägt Intensität.
-3. Form geht immer vor Gewicht.
+const SaveIcon = Save;
 
-Deine Aufgaben:
-- Erstelle progressive Trainingspläne (Kraft, Ausdauer, Hyrox-Sim).
-- Motiviere den Athleten, aber achte auf Verletzungsprävention.
-- Nutze RPE (Rate of Perceived Exertion) zur Steuerung der Intensität.
-- Wenn der Athlet Equipment-Einschränkungen hat (z.B. nur Kettlebells), passe den Plan kreativ an.`;
+// --- STANDARDS & PROMPTS ---
+const DEFAULT_SYSTEM_PROMPT = `Du bist Coach Andy, ein erfahrener Hyrox- und Fitness-Coach. Deine Philosophie: 1. Hyrox besteht zu 50% aus Laufen und zu 50% aus funktionaler Kraft. 2. Konsistenz schlägt Intensität. 3. Form geht immer vor Gewicht.`;
+const DEFAULT_WARMUP_PROMPT = `Erstelle ein spezifisches Warm-up (5-10 Min) für das Workout (RAMP-Struktur).`;
+const DEFAULT_COOLDOWN_PROMPT = `Erstelle ein Cool Down (5-10 Min) zur Regeneration.`;
+const DEFAULT_PLAN_PROMPT = `Erstelle einen neuen 4-Wochen-Trainingsplan als JSON für meine App.`;
 
-const DEFAULT_WARMUP_PROMPT = `Du bist Coach Andy. Deine Aufgabe ist es, ein spezifisches Warm-up (5-10 Minuten) für das anstehende Workout zu erstellen.
-
-Deine Philosophie fürs Aufwärmen:
-1. "Warm-up to perform": Wir wärmen uns auf, um Leistung zu bringen.
-2. Dynamik vor Statik: Keine langen Halteübungen.
-3. Spezifität: Bereite genau die Gelenke und Muskeln vor.
-
-Struktur (RAMP): Raise, Activate, Mobilize, Potentiate.`;
-
-const DEFAULT_COOLDOWN_PROMPT = `Du bist Coach Andy. Deine Aufgabe ist es, ein Cool Down (5-10 Minuten) zu erstellen, um den Körper herunterzufahren.
-
-Deine Philosophie fürs Cool Down:
-1. Parasympathikus aktivieren: Atmung beruhigen, Stress abbauen.
-2. Statisches Dehnen: Jetzt ist die Zeit für längere Dehnübungen (30-60sek halten).
-3. Mobility: Fokus auf die Muskelgruppen, die gerade trainiert wurden.`;
-
-// --- ANGEPASSTER PLAN PROMPT (MIT CODE-BLOCK ZWANG) ---
-const DEFAULT_PLAN_PROMPT = `Erstelle einen neuen 4-Wochen-Trainingsplan (3-4 Einheiten pro Woche) für Hyrox/Functional Fitness.
-
-WICHTIGE ANWEISUNG FÜR DAS OUTPUT-FORMAT:
-Bitte verpacke die Antwort IMMER in einen Markdown-Code-Block (Start mit \`\`\`json und Ende mit \`\`\`).
-Dadurch erhalte ich einen "Kopieren"-Button.
-
-Der Inhalt des Code-Blocks muss ein valides JSON-Array sein mit exakt dieser Struktur:
-[
-  {
-    "id": 1,
-    "week": 1,
-    "title": "Titel des Workouts",
-    "type": "strength" | "circuit" | "endurance",
-    "duration": "60 Min",
-    "focus": "Kurze Beschreibung",
-    "color": "border-blue-500 text-blue-600",
-    "badgeColor": "bg-blue-100 text-blue-700",
-    "exercises": [
-      { "name": "Übungsname", "sets": 3, "reps": "10-12", "rpe": "8", "note": "Hinweis" }
-    ]
-  }
-]
-
-ANWEISUNG ZUR PROGRESSION:
-Analysiere meinen Trainingsverlauf der letzten 4 Wochen (siehe unten).
-- Wenn ich mich bei Übungen gesteigert habe, erhöhe leicht das Volumen oder die Intensität.
-- Wenn ich stagniert habe, variiere den Reiz.
-- Berücksichtige strikt mein verfügbares Equipment (siehe unten).`;
-
-// --- EQUIPMENT LISTE ---
 const DEFAULT_EQUIPMENT = [
-  { category: 'Langhantel', items: ['Olympia-Stange', 'Gewichte bis 100kg', 'Power Rack'] },
-  { category: 'Kettlebells', items: ['4 kg', '6 kg', '8 kg', '12 kg'] },
-  { category: 'Bodyweight & Sonstiges', items: ['Klimmzugstange', 'Therabänder (div. Stärken)', 'Laufschuhe'] }
+  { category: 'Langhantel', items: ['Olympia-Stange', 'Gewichte bis 100kg'] },
+  { category: 'Kettlebells', items: ['8 kg', '12 kg', '16 kg'] },
+  { category: 'Sonstiges', items: ['Klimmzugstange', 'Laufschuhe'] }
 ];
 
-// --- HILFSFUNKTION: Daten vorbereiten ---
-const prepareData = (workouts) => {
-  return workouts.map(workout => ({
-    ...workout,
-    exercises: workout.exercises.map(ex => ({
-      ...ex,
-      logs: ex.logs || Array.from({ length: ex.sets }).map(() => ({
-        weight: '',
-        reps: '',
-        completed: false
-      }))
-    }))
-  }));
-};
+const prepareData = (workouts) => workouts.map(w => ({
+  ...w,
+  exercises: w.exercises.map(ex => ({
+    ...ex,
+    logs: ex.logs || Array.from({ length: ex.sets }).map(() => ({ weight: '', reps: '', completed: false }))
+  }))
+}));
 
-// --- INITIALE DATEN ---
 const rawWorkouts = [
-  {
-    id: 1,
-    week: 1,
-    title: 'Tag 1: KB Kraft',
-    type: 'strength',
-    duration: '45-60 Min',
-    focus: 'Ganzkörper & Basis',
-    color: 'border-blue-500 text-blue-600',
-    badgeColor: 'bg-blue-100 text-blue-700',
-    exercises: [
-      { name: 'Goblet Squats (KB)', sets: 3, reps: '10-12', rpe: '8', note: 'Nimm die 8er oder 12er' },
-      { name: 'Schulterdrücken', sets: 3, reps: '8-10', rpe: '8', note: 'Pro Seite (4er oder 6er)' },
-      { name: 'Einarmiges Rudern', sets: 3, reps: '10-12', rpe: '8', note: 'Abstützen auf Stuhl' },
-      { name: 'Rumanian Deadlift', sets: 3, reps: '12-15', rpe: '7', note: 'Beide Hände an die 12er' },
-      { name: 'Floor Press', sets: 3, reps: '10-12', rpe: '8', note: 'Rückenlage am Boden' },
-    ],
-  },
-  {
-    id: 2,
-    week: 1,
-    title: 'Tag 2: Ausdauer Zirkel',
-    type: 'circuit',
-    duration: '30-40 Min',
-    focus: 'Herz-Kreislauf',
-    color: 'border-orange-500 text-orange-600',
-    badgeColor: 'bg-orange-100 text-orange-700',
-    exercises: [
-      { name: 'KB Swings', sets: 3, reps: '20', rpe: 'Explosiv', note: 'Hüft-Einsatz! (12er)' },
-      { name: 'Thruster', sets: 3, reps: '10', rpe: 'Hoch', note: 'Squat + Drücken' },
-      { name: 'Burpees', sets: 3, reps: '10', rpe: 'Pace', note: 'Ohne Gewicht' },
-      { name: 'Mountain Climbers', sets: 3, reps: '30sek', rpe: 'Schnell', note: 'Am Boden' },
-    ],
-  },
-  {
-    id: 3,
-    week: 1,
-    title: 'Tag 3: Core & Grip',
-    type: 'assistance',
-    duration: '30 Min',
-    focus: 'Stabilität',
-    color: 'border-teal-500 text-teal-600',
-    badgeColor: 'bg-teal-100 text-teal-700',
-    exercises: [
-      { name: 'Farmers Carry', sets: 3, reps: '40m', rpe: '7', note: 'Pro Seite laufen' },
-      { name: 'Russian Twists', sets: 3, reps: '20', rpe: '9', note: 'Füße hoch wenn möglich' },
-      { name: 'Plank Pull-Through', sets: 3, reps: '12', rpe: '8', note: 'KB durchziehen' },
-      { name: 'Halo', sets: 3, reps: '10', rpe: '7', note: 'Um den Kopf kreisen' },
-    ],
-  },
-  {
-    id: 4,
-    week: 2,
-    title: 'Tag 1: Kraft Steigerung',
-    type: 'strength',
-    duration: '50-60 Min',
-    focus: 'Mehr Gewicht',
-    color: 'border-red-500 text-red-600',
-    badgeColor: 'bg-red-100 text-red-700',
-    exercises: [
-      { name: 'Goblet Squats (Schwer)', sets: 4, reps: '8', rpe: '9', note: 'Versuch die 16er!' },
-      { name: 'Push Press', sets: 4, reps: '6-8', rpe: '9', note: 'Mit Beinschwung' },
-    ],
-  }
+  { id: 1, week: 1, title: 'Tag 1: Kraft Basis', type: 'strength', duration: '60 Min', focus: 'Grundkraft', color: 'border-blue-500 text-blue-600', badgeColor: 'bg-blue-100 text-blue-700', exercises: [{ name: 'Kniebeugen', sets: 3, reps: '10', rpe: '8' }] }
 ];
 
-// --- TIMER KOMPONENTE ---
-function WorkoutTimer({ transparent = false, initialTime = 0 }) {
+// --- HILFSKOMPONENTEN ---
+
+function WorkoutTimer({ initialTime = 0 }) {
   const [seconds, setSeconds] = useState(initialTime);
-  const [isActive, setIsActive] = useState(true);
-
   useEffect(() => {
-    setSeconds(initialTime);
-  }, [initialTime]);
-
-  useEffect(() => {
-    let interval = null;
-    if (isActive) {
-      interval = setInterval(() => {
-        setSeconds((s) => s + 1);
-      }, 1000);
-    } else if (!isActive && seconds !== 0) {
-      clearInterval(interval);
-    }
+    const interval = setInterval(() => setSeconds(s => s + 1), 1000);
     return () => clearInterval(interval);
-  }, [isActive, seconds]);
-
-  const formatTime = (totalSeconds) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  if (transparent) {
-      return (
-        <div 
-            onClick={() => setIsActive(!isActive)}
-            className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full cursor-pointer hover:bg-white/30 transition-colors border border-white/10 shadow-sm"
-        >
-            <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-red-400 animate-pulse' : 'bg-gray-300'}`}></div>
-            <span className="font-mono text-xs font-bold text-white tracking-widest">
-                {formatTime(seconds)} min
-            </span>
-        </div>
-      )
-  }
-
-  return (
-    <div 
-      onClick={() => setIsActive(!isActive)}
-      className="flex items-center gap-2 bg-blue-900 bg-opacity-50 px-3 py-1 rounded-lg border border-blue-400/30 cursor-pointer hover:bg-blue-800 transition-colors"
-    >
-      <Timer size={18} className={`text-blue-200 ${isActive ? 'animate-pulse' : ''}`} />
-      <span className="font-mono text-xl font-bold text-white tracking-widest">
-        {formatTime(seconds)}
-      </span>
-    </div>
-  );
+  }, []);
+  const format = (s) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+  return <div className="bg-white/20 px-3 py-1 rounded-full font-mono text-white text-sm border border-white/10">{format(seconds)}</div>;
 }
 
-// --- WARMUP SCREEN ---
-function WarmupScreen({ prompt, onComplete, onBack }) {
-  const WARMUP_DURATION = 300; 
-  const [timeLeft, setTimeLeft] = useState(WARMUP_DURATION); 
+// --- MODALE ---
 
-  const handleFinish = () => {
-      const elapsed = WARMUP_DURATION - timeLeft;
-      onComplete(elapsed);
-  };
-
-  useEffect(() => {
-    if (timeLeft <= 0) {
-      handleFinish(); 
-      return;
-    }
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timeLeft]);
-
-  const formatTime = (totalSeconds) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div className="min-h-screen bg-white font-sans flex flex-col">
-        <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white px-6 py-4 sticky top-0 z-10 shadow-lg">
-          <div className="flex justify-between items-center mb-1">
-            <button onClick={onBack} className="flex items-center gap-1 text-orange-100 hover:text-white transition-colors">
-              <ArrowLeft size={20} />
-              <span className="text-sm font-medium">Zurück</span>
-            </button>
-            <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full font-mono text-xs font-bold text-white tracking-widest border border-white/10">
-               WARM-UP
-            </span>
-          </div>
-          <h1 className="text-xl font-black mt-1">Aufwärmen</h1>
-          <p className="text-orange-100 text-[10px] flex items-center gap-1">
-            <Flame size={10} /> Mach dich bereit
-          </p>
-        </div>
-
-        <div className="flex-1 p-6 flex flex-col justify-between">
-            <div className="bg-orange-50 border border-orange-100 rounded-3xl p-6 shadow-sm mb-6 flex-1 overflow-y-auto">
-                <div className="flex items-center gap-2 mb-4 text-orange-600">
-                    <Zap size={24} fill="currentColor" />
-                    <h3 className="font-bold text-lg">Deine Routine</h3>
-                </div>
-                <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap font-medium">
-                    {prompt}
-                </div>
-            </div>
-
-            <div>
-                <div className="text-center mb-8">
-                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Restzeit</p>
-                    <div className="text-7xl font-black text-gray-800 font-mono tracking-tighter">
-                        {formatTime(timeLeft)}
-                    </div>
-                </div>
-
-                <button 
-                    onClick={handleFinish}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold py-4 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2"
-                >
-                    <Dumbbell size={20} />
-                    Warm-up beenden & Workout starten
-                </button>
-            </div>
-        </div>
-    </div>
-  );
-}
-
-// --- COOLDOWN SCREEN ---
-function CooldownScreen({ prompt, onComplete }) {
-  const [timeLeft, setTimeLeft] = useState(300); 
-
-  useEffect(() => {
-    if (timeLeft <= 0) return;
-    const interval = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [timeLeft]);
-
-  const formatTime = (totalSeconds) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <div className="min-h-screen bg-white font-sans flex flex-col">
-        <div className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white px-6 py-4 sticky top-0 z-10 shadow-lg">
-          <div className="flex justify-between items-center mb-1">
-            <div className="flex items-center gap-1 text-teal-100">
-               <CheckCircle2 size={20} />
-               <span className="text-sm font-medium">Workout geschafft!</span>
-            </div>
-            <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full font-mono text-xs font-bold text-white tracking-widest border border-white/10">
-               COOL-DOWN
-            </span>
-          </div>
-          <h1 className="text-xl font-black mt-1">Regeneration</h1>
-          <p className="text-teal-100 text-[10px] flex items-center gap-1">
-            <Wind size={10} /> Fahre das System runter
-          </p>
-        </div>
-
-        <div className="flex-1 p-6 flex flex-col justify-between">
-            <div className="bg-teal-50 border border-teal-100 rounded-3xl p-6 shadow-sm mb-6 flex-1 overflow-y-auto">
-                <div className="flex items-center gap-2 mb-4 text-teal-600">
-                    <Wind size={24} fill="currentColor" />
-                    <h3 className="font-bold text-lg">Deine Routine</h3>
-                </div>
-                <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap font-medium">
-                    {prompt}
-                </div>
-            </div>
-
-            <div>
-                <div className="text-center mb-8">
-                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Restzeit</p>
-                    <div className="text-7xl font-black text-gray-800 font-mono tracking-tighter">
-                        {formatTime(timeLeft)}
-                    </div>
-                </div>
-
-                <button 
-                    onClick={onComplete}
-                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-4 rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2"
-                >
-                    <SaveIcon size={20} />
-                    Cool Down beenden & Speichern
-                </button>
-            </div>
-        </div>
-    </div>
-  );
-}
-
-// --- PASTE PLAN MODAL ---
-function PastePlanModal({ isOpen, onClose, onImport }) {
-    const [jsonText, setJsonText] = useState("");
-    const [error, setError] = useState(null);
-
-    if (!isOpen) return null;
-
-    const handleImport = () => {
-        try {
-            // Bereinige den Text von Markdown-Code-Blöcken
-            let cleanedText = jsonText.trim();
-            if (cleanedText.startsWith("```json")) {
-                cleanedText = cleanedText.substring(7);
-            } else if (cleanedText.startsWith("```")) {
-                cleanedText = cleanedText.substring(3);
-            }
-            if (cleanedText.endsWith("```")) {
-                cleanedText = cleanedText.substring(0, cleanedText.length - 3);
-            }
-            
-            const parsed = JSON.parse(cleanedText.trim());
-            
-            if (Array.isArray(parsed)) {
-                onImport(parsed);
-                setJsonText("");
-                setError(null);
-                onClose();
-            } else {
-                setError("Format-Fehler: Es muss eine Liste von Workouts sein (startet mit '[').");
-            }
-        } catch (e) {
-            setError("Ungültiges JSON. Bitte kopiere nur den Code-Bereich (beginnt mit '[').");
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200 relative overflow-hidden">
-                <div className="bg-slate-900 p-6 flex justify-between items-center text-white shrink-0">
-                    <h3 className="text-xl font-bold flex items-center gap-2">
-                        <ClipboardCheck size={20} className="text-blue-400"/> Plan einfügen
-                    </h3>
-                    <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-full transition-colors">
-                        <X size={24} />
-                    </button>
-                </div>
-                <div className="p-6 bg-gray-50 flex-1 flex flex-col gap-4">
-                    <p className="text-sm text-gray-600">Füge hier den JSON-Code ein, den die KI erstellt hat:</p>
-                    <textarea 
-                        className="w-full flex-1 p-4 rounded-xl border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-mono text-xs"
-                        placeholder='[ { "id": 1, "title": "..." } ]'
-                        value={jsonText}
-                        onChange={(e) => setJsonText(e.target.value)}
-                    />
-                    {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
-                    <button 
-                        onClick={handleImport}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors"
-                    >
-                        Plan laden & anwenden
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// --- CONFIRMATION MODAL ---
-function ExitDialog({ isOpen, onSave, onDiscard, onCancel }) {
+function PromptModal({ isOpen, onClose, title, icon: Icon, currentPrompt, onSave, colorClass }) {
+  const [text, setText] = useState(currentPrompt);
+  const [copied, setCopied] = useState(false);
   if (!isOpen) return null;
-
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 animate-in zoom-in-95 duration-200">
-        <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-3">
-            <AlertTriangle size={24} />
-          </div>
-          <h3 className="text-lg font-bold text-gray-900">Training verlassen?</h3>
-          <p className="text-gray-500 text-sm mt-1">
-            Möchtest du deine Fortschritte speichern oder verwerfen?
-          </p>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <div className={`p-6 text-white flex justify-between items-center ${colorClass}`}>
+          <h3 className="font-bold flex items-center gap-2"><Icon size={20}/> {title}</h3>
+          <button onClick={onClose}><X/></button>
         </div>
-        
-        <div className="space-y-3">
-          <button 
-            onClick={onSave}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
-          >
-            <SaveIcon size={18} /> Speichern & Verlassen
-          </button>
-          
-          <button 
-            onClick={onDiscard}
-            className="w-full bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
-          >
-            <Trash2 size={18} /> Verwerfen
-          </button>
-          
-          <button 
-            onClick={onCancel}
-            className="w-full text-gray-400 font-medium py-2 hover:text-gray-600 transition-colors text-sm"
-          >
-            Abbrechen
-          </button>
+        <div className="p-6 bg-gray-50"><textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full h-64 p-4 rounded-xl border font-mono text-sm"/></div>
+        <div className="p-4 border-t flex gap-2">
+           <button onClick={handleCopy} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-2">{copied ? <Check size={18}/> : <Copy size={18}/>} {copied ? 'Kopiert' : 'Kopieren'}</button>
+           <button onClick={() => { onSave(text); onClose(); }} className="flex-1 py-3 bg-slate-900 text-white font-bold rounded-xl">Speichern</button>
         </div>
       </div>
     </div>
   );
 }
 
-// --- PROMPT MODAL (EDITABLE + DYNAMIC APPEND) ---
-function PromptModal({ isOpen, onClose, title, icon: Icon, currentPrompt, onSave, colorClass, appendEquipment = false, equipment = [], appendHistory = false, history = [] }) {
-  const [copied, setCopied] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [text, setText] = useState(currentPrompt);
+function EquipmentModal({ isOpen, onClose, equipment, onSave }) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+      <div className="bg-white rounded-3xl p-6 w-full max-w-lg">
+        <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Package className="text-blue-600"/> Equipment Editor</h3>
+        <div className="space-y-4 max-h-96 overflow-y-auto">{equipment.map((c, i) => <div key={i} className="p-4 bg-gray-50 rounded-2xl border border-gray-100"><h4 className="font-bold text-sm text-slate-800">{c.category}</h4><p className="text-xs text-gray-500 mt-1">{c.items.join(', ')}</p></div>)}</div>
+        <button onClick={onClose} className="w-full mt-6 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg">Fertig</button>
+      </div>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    let finalPrompt = currentPrompt;
+function PastePlanModal({ isOpen, onClose, onImport }) {
+  const [jsonText, setJsonText] = useState("");
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6">
+        <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold text-slate-900">Plan einfügen</h3><button onClick={onClose}><X size={24} /></button></div>
+        <textarea className="w-full h-64 p-4 rounded-xl border font-mono text-xs mb-4" value={jsonText} onChange={(e) => setJsonText(e.target.value)} placeholder='[...] hinterlege hier den JSON Code' />
+        <button onClick={() => { try { onImport(JSON.parse(jsonText)); onClose(); } catch(e) { alert("Fehler beim JSON Import"); } }} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">Laden</button>
+      </div>
+    </div>
+  );
+}
 
-    if (isOpen) {
-        if (appendEquipment) {
-            let equipmentString = "\n\n=== MEIN VERFÜGBARES EQUIPMENT ===\n";
-            equipment.forEach(cat => {
-                equipmentString += `- ${cat.category}: ${cat.items.join(', ')}\n`;
-            });
-            finalPrompt += equipmentString;
-        }
+// --- HAUPT APP ---
 
-        if (appendHistory) {
- 
+export default function App() {
+  const [activeTab, setActiveTab] = useState('training');
+  const [activeWeek, setActiveWeek] = useState(1);
+  const [data, setData] = useState(() => JSON.parse(localStorage.getItem('coachAndyData')) || prepareData(rawWorkouts));
+  const [history, setHistory] = useState(() => JSON.parse(localStorage.getItem('coachAndyHistory')) || []);
+  const [equipment, setEquipment] = useState(() => JSON.parse(localStorage.getItem('coachAndyEquipment')) || DEFAULT_EQUIPMENT);
+  const [activeWorkout, setActiveWorkout] = useState(null);
+  const [activeModal, setActiveModal] = useState(null);
+  const [showPastePlanModal, setShowPastePlanModal] = useState(false);
+
+  const saveWorkout = () => {
+    const entry = { id: Date.now(), title: activeWorkout.title, date: new Date().toISOString(), week: activeWorkout.week, type: activeWorkout.type, snapshot: activeWorkout };
+    const newHistory = [entry, ...history];
+    setHistory(newHistory);
+    localStorage.setItem('coachAndyHistory', JSON.stringify(newHistory));
+    setActiveWorkout(null);
+    setActiveTab('history');
+  };
+
+  const exportData = () => {
+    const blob = new Blob([JSON.stringify({data, history, equipment})], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'coach-andy-backup.json'; a.click();
+  };
+
+  const handlePasteImport = (importedData) => {
+    const prepared = prepareData(importedData);
+    setData(prepared);
+    localStorage.setItem('coachAndyData', JSON.stringify(prepared));
+    alert("Neuer Plan erfolgreich geladen!");
+  };
+
+  // --- RENDER INHALT (SMARTPHONE-CONTENT) ---
+  const renderAppContent = () => {
+    if (activeWorkout) return (
+      <div className="flex-1 bg-slate-50 relative flex flex-col h-full overflow-hidden">
+        <div className="bg-blue-600 p-4 text-white flex justify-between items-center shadow-lg shrink-0 z-10">
+          <button onClick={() => setActiveWorkout(null)} className="p-2 bg-white/10 rounded-xl"><ArrowLeft/></button>
+          <h2 className="font-bold text-lg">{activeWorkout.title}</h2>
+          <WorkoutTimer />
+        </div>
+        <div className="p-4 space-y-4 flex-1 overflow-y-auto pb-24">
+          {activeWorkout.exercises.map((ex, exIdx) => (
+            <div key={exIdx} className="bg-white p-5 rounded-[2.5rem] border shadow-sm">
+              <h3 className="font-bold mb-4 text-slate-800 text-lg flex justify-between">{ex.name} <span className="bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[10px] tracking-widest uppercase">RPE {ex.rpe}</span></h3>
+              <div className="space-y-3">
+                {ex.logs.map((log, sIdx) => (
+                  <div key={sIdx} className="flex gap-2 items-center">
+                    <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-xs font-black text-slate-300 border border-slate-100">{sIdx+1}</div>
+                    <input type="number" placeholder="kg" className="flex-1 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-center font-black focus:border-blue-500 outline-none" value={log.weight} onChange={(e) => { const d = {...activeWorkout}; d.exercises[exIdx].logs[sIdx].weight = e.target.value; setActiveWorkout(d); }} />
+                    <input type="text" placeholder="reps" className="flex-1 p-3 bg-slate-50 border border-slate-100 rounded-2xl text-center font-black focus:border-blue-500 outline-none" value={log.reps} onChange={(e) => { const d = {...activeWorkout}; d.exercises[exIdx].logs[sIdx].reps = e.target.value; setActiveWorkout(d); }} />
+                    <button onClick={() => { const d = {...activeWorkout}; d.exercises[exIdx].logs[sIdx].completed = !log.completed; setActiveWorkout(d); }} className={`p-3 rounded-2xl border transition-all ${log.completed ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-100' : 'bg-slate-50 border-slate-100 text-slate-200'}`}><Check strokeWidth={3} size={24}/></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button onClick={saveWorkout} className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black shadow-2xl mt-8 flex items-center justify-center gap-3 active:scale-95 transition-transform"><SaveIcon size={24}/> TRAINING ABSCHLIESSEN</button>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="flex-1 bg-slate-50 relative flex flex-col h-full overflow-hidden">
+        <PromptModal isOpen={activeModal === 'system'} onClose={() => setActiveModal(null)} title="Coach Andy Philosophie" icon={FileText} currentPrompt={DEFAULT_SYSTEM_PROMPT} onSave={() => {}} colorClass="bg-blue-600" />
+        <PromptModal isOpen={activeModal === 'plan'} onClose={() => setActiveModal(null)} title="KI Plan Generator" icon={Sparkles} currentPrompt={DEFAULT_PLAN_PROMPT} onSave={() => {}} colorClass="bg-indigo-600" />
+        <EquipmentModal isOpen={activeModal === 'equipment'} onClose={() => setActiveModal(null)} equipment={equipment} onSave={setEquipment} />
+        <PastePlanModal isOpen={showPastePlanModal} onClose={() => setShowPastePlanModal(false)} onImport={handlePasteImport} />
+
+        {activeTab === 'training' && (
+          <div className="flex flex-col h-full">
+            <header className="bg-white p-6 border-b shadow-sm shrink-0 z-10 rounded-b-[2rem]">
+              <h1 className="text-3xl font-black text-slate-900 flex items-center gap-2">Andy <Dumbbell className="text-blue-600" size={32}/></h1>
+              <div className="mt-8 flex gap-2">{[1, 2, 3, 4].map(w => (
+                <button key={w} onClick={() => setActiveWeek(w)} className={`flex-1 py-3 rounded-2xl font-black transition-all ${activeWeek === w ? 'bg-blue-600 text-white shadow-xl scale-105' : 'bg-slate-50 text-slate-300'}`}>W{w}</button>
+              ))}</div>
+            </header>
+            <div className="p-4 space-y-4 flex-1 overflow-y-auto pb-32">
+              {data.filter(w => w.week === activeWeek).map(w => (
+                <div key={w.id} onClick={() => setActiveWorkout(JSON.parse(JSON.stringify(w)))} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-50 flex justify-between items-center group active:scale-95 transition-all cursor-pointer">
+                  <div className="flex-1">
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${w.badgeColor}`}>{w.type}</span>
+                    <h3 className="text-xl font-bold mt-2 text-slate-800">{w.title}</h3>
+                    <div className="flex gap-4 mt-2 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                      <span className="flex items-center gap-1"><Clock size={12}/> {w.duration}</span>
+                      <span className="flex items-center gap-1"><Target size={12}/> {w.focus}</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-3xl group-hover:bg-blue-600 group-hover:text-white transition-all"><ChevronRight /></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'history' && (
+          <div className="p-6 flex-1 overflow-y-auto pb-32">
+            <h1 className="text-3xl font-black mb-8 text-slate-900">Verlauf</h1>
+            <div className="space-y-4">
+              {history.map(h => (
+                <div key={h.id} className="bg-white p-5 rounded-[2rem] border border-slate-50 flex justify-between items-center shadow-sm active:scale-95 transition-transform">
+                  <div>
+                    <h4 className="font-bold text-slate-800">{h.title}</h4>
+                    <div className="flex gap-2 items-center mt-1">
+                      <span className="text-[10px] font-black text-slate-300 uppercase">{new Date(h.date).toLocaleDateString()}</span>
+                      <span className="w-1 h-1 rounded-full bg-slate-200" />
+                      <span className="text-[10px] font-black text-emerald-500 uppercase">Woche {h.week}</span>
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center"><CheckCircle2 size={24}/></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'profile' && (
+          <div className="p-6 space-y-6 flex-1 overflow-y-auto pb-32">
+            <h1 className="text-3xl font-black mb-4">Einstellungen</h1>
+            <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden">
+              <Cloud className="absolute -right-12 -bottom-12 w-48 h-48 opacity-5" />
+              <div className="relative z-10">
+                <h3 className="text-2xl font-black mb-2 flex items-center gap-2"><Database className="text-blue-400"/> KI & Daten</h3>
+                <p className="text-xs text-slate-400 mb-8 leading-relaxed">Verwalte deine Prompts, dein Equipment und erstelle Backups.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setActiveModal('system')} className="bg-white/10 hover:bg-white/20 p-5 rounded-3xl text-[10px] font-black uppercase tracking-widest flex flex-col items-center gap-3 transition-colors"><FileText className="text-blue-400" size={24}/> Philosophie</button>
+                  <button onClick={() => setActiveModal('plan')} className="bg-white/10 hover:bg-white/20 p-5 rounded-3xl text-[10px] font-black uppercase tracking-widest flex flex-col items-center gap-3 transition-colors"><Sparkles className="text-indigo-400" size={24}/> Plan Generator</button>
+                  <button onClick={() => setActiveModal('equipment')} className="bg-white/10 hover:bg-white/20 p-5 rounded-3xl text-[10px] font-black uppercase tracking-widest flex flex-col items-center gap-3 transition-colors col-span-2"><Package className="text-emerald-400" size={24}/> Equipment Editor</button>
+                  <button onClick={exportData} className="bg-blue-600 hover:bg-blue-500 p-5 rounded-3xl text-[10px] font-black uppercase tracking-widest flex flex-col items-center gap-3 transition-colors"><Download size={24}/> Backup</button>
+                  <button onClick={() => setShowPastePlanModal(true)} className="bg-emerald-600 hover:bg-emerald-500 p-5 rounded-3xl text-[10px] font-black uppercase tracking-widest flex flex-col items-center gap-3 transition-colors"><ClipboardCheck size={24}/> Plan Import</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <nav className="absolute bottom-8 left-6 right-6 bg-white/90 backdrop-blur-2xl border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[2.5rem] p-2 flex justify-between z-50">
+          {[
+            { id: 'profile', icon: UserCircle, label: 'Profil' },
+            { id: 'training', icon: Dumbbell, label: 'Training' },
+            { id: 'history', icon: History, label: 'Verlauf' }
+          ].map(item => (
+            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex-1 flex flex-col items-center py-4 rounded-[2rem] transition-all duration-300 ${activeTab === item.id ? 'bg-slate-900 text-white shadow-xl scale-105' : 'text-slate-300 hover:text-slate-500'}`}>
+              <item.icon size={22} strokeWidth={activeTab === item.id ? 2.5 : 2}/>
+              <span className="text-[10px] font-black mt-2 uppercase tracking-[0.1em]">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
+    );
+  };
+
+  // --- FINALER RETURN (SMARTPHONE RAHMEN) ---
+  return (
+    <div className="min-h-screen bg-slate-200 md:flex md:justify-center md:items-center md:py-8 font-sans">
+      <div className="w-full h-full min-h-screen md:min-h-[850px] md:max-h-[90vh] md:w-[420px] bg-slate-50 md:rounded-[3rem] md:shadow-2xl md:border-4 md:border-slate-900 relative overflow-hidden flex flex-col">
+        {renderAppContent()}
+      </div>
+    </div>
+  );
+}
