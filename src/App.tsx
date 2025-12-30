@@ -36,7 +36,8 @@ import {
   Zap,
   Wind,
   Sparkles,
-  ClipboardCheck
+  ClipboardCheck,
+  Volume2
 } from 'lucide-react';
 
 // --- STANDARD PROMPTS ---
@@ -68,7 +69,7 @@ Deine Philosophie fürs Cool Down:
 2. Statisches Dehnen: Jetzt ist die Zeit für längere Dehnübungen (30-60sek halten).
 3. Mobility: Fokus auf die Muskelgruppen, die gerade trainiert wurden.`;
 
-// --- ANGEPASSTER PLAN PROMPT (MIT CODE-BLOCK ZWANG) ---
+// --- ANGEPASSTER PLAN PROMPT ---
 const DEFAULT_PLAN_PROMPT = `Erstelle einen neuen 4-Wochen-Trainingsplan (3-4 Einheiten pro Woche) für Hyrox/Functional Fitness.
 
 WICHTIGE ANWEISUNG FÜR DAS OUTPUT-FORMAT:
@@ -104,6 +105,37 @@ const DEFAULT_EQUIPMENT = [
   { category: 'Kettlebells', items: ['4 kg', '6 kg', '8 kg', '12 kg'] },
   { category: 'Bodyweight & Sonstiges', items: ['Klimmzugstange', 'Therabänder (div. Stärken)', 'Laufschuhe'] }
 ];
+
+// --- AUDIO UTILS (WEB AUDIO API) ---
+const playBeep = (freq = 440, type = 'sine', duration = 0.1, vol = 0.1) => {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        
+        gain.gain.setValueAtTime(vol, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+
+        // Haptic Feedback (Vibration) falls unterstützt
+        if (navigator.vibrate) {
+            navigator.vibrate(200);
+        }
+    } catch (e) {
+        console.error("Audio Playback Error", e);
+    }
+};
 
 // --- HILFSFUNKTION: Daten vorbereiten ---
 const prepareData = (workouts) => {
@@ -241,7 +273,7 @@ function WorkoutTimer({ transparent = false, initialTime = 0 }) {
   );
 }
 
-// --- WARMUP SCREEN ---
+// --- WARMUP SCREEN (Mit Sound) ---
 function WarmupScreen({ prompt, onComplete, onBack }) {
   const WARMUP_DURATION = 300; 
   const [timeLeft, setTimeLeft] = useState(WARMUP_DURATION); 
@@ -253,9 +285,16 @@ function WarmupScreen({ prompt, onComplete, onBack }) {
 
   useEffect(() => {
     if (timeLeft <= 0) {
+      playBeep(880, 'square', 0.5); // Finaler Sound
       handleFinish(); 
       return;
     }
+
+    // Countdown Sounds (bei 3, 2, 1)
+    if (timeLeft <= 3 && timeLeft > 0) {
+        playBeep(440, 'sine', 0.2);
+    }
+
     const interval = setInterval(() => {
       setTimeLeft((prev) => prev - 1);
     }, 1000);
@@ -300,7 +339,7 @@ function WarmupScreen({ prompt, onComplete, onBack }) {
             <div>
                 <div className="text-center mb-8">
                     <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Restzeit</p>
-                    <div className="text-7xl font-black text-gray-800 font-mono tracking-tighter">
+                    <div className={`text-7xl font-black font-mono tracking-tighter transition-colors duration-300 ${timeLeft <= 3 ? 'text-red-500 scale-110' : 'text-gray-800'}`}>
                         {formatTime(timeLeft)}
                     </div>
                 </div>
@@ -318,12 +357,20 @@ function WarmupScreen({ prompt, onComplete, onBack }) {
   );
 }
 
-// --- COOLDOWN SCREEN ---
+// --- COOLDOWN SCREEN (Mit Sound) ---
 function CooldownScreen({ prompt, onComplete }) {
   const [timeLeft, setTimeLeft] = useState(300); 
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
+    if (timeLeft <= 0) {
+        playBeep(880, 'square', 0.5);
+        return;
+    }
+
+    if (timeLeft <= 3 && timeLeft > 0) {
+        playBeep(440, 'sine', 0.2);
+    }
+
     const interval = setInterval(() => {
       setTimeLeft((prev) => prev - 1);
     }, 1000);
@@ -368,7 +415,7 @@ function CooldownScreen({ prompt, onComplete }) {
             <div>
                 <div className="text-center mb-8">
                     <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Restzeit</p>
-                    <div className="text-7xl font-black text-gray-800 font-mono tracking-tighter">
+                    <div className={`text-7xl font-black font-mono tracking-tighter transition-colors duration-300 ${timeLeft <= 3 ? 'text-teal-500 scale-110' : 'text-gray-800'}`}>
                         {formatTime(timeLeft)}
                     </div>
                 </div>
@@ -497,7 +544,7 @@ function ExitDialog({ isOpen, onSave, onDiscard, onCancel }) {
   );
 }
 
-// --- PROMPT MODAL (EDITABLE + DYNAMIC APPEND) ---
+// --- PROMPT MODAL ---
 function PromptModal({ isOpen, onClose, title, icon: Icon, currentPrompt, onSave, colorClass, appendEquipment = false, equipment = [], appendHistory = false, history = [] }) {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -651,7 +698,7 @@ function PromptModal({ isOpen, onClose, title, icon: Icon, currentPrompt, onSave
   );
 }
 
-// --- EQUIPMENT MODAL (EDITABLE) ---
+// --- EQUIPMENT MODAL ---
 function EquipmentModal({ isOpen, onClose, equipment, onSave }) {
   const [localEquipment, setLocalEquipment] = useState(equipment);
   const [isEditing, setIsEditing] = useState(false);
@@ -911,7 +958,14 @@ function App() {
     let interval = null;
     if (isRestActive) {
       interval = setInterval(() => {
-        setRestSeconds((s) => s + 1);
+        setRestSeconds((s) => {
+            const next = s + 1;
+            // Feature: Kurzer Audio-Hinweis alle 30s während der Pause
+            if (next > 0 && next % 30 === 0) {
+                playBeep(600, 'sine', 0.1, 0.05); // Leiser Ton
+            }
+            return next;
+        });
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -951,6 +1005,9 @@ function App() {
       setIsCooldownActive(false); 
       setElapsedWarmupTime(0); 
       setIsRestActive(false);
+      
+      // Init Audio Context durch User Interaktion ermöglichen
+      playBeep(0, 'sine', 0.001, 0); 
     }
   };
 
@@ -1299,7 +1356,9 @@ function App() {
                       
                       {showRestTimerHere && (
                         <div className="mt-1 mb-2 mx-1 bg-blue-50 border border-blue-100 rounded-lg p-2 flex items-center justify-center gap-2 animate-in slide-in-from-top-1 fade-in shadow-sm">
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-blue-700">Pause</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wide text-blue-700 flex items-center gap-1">
+                             <Volume2 size={10} className="animate-pulse"/> Pause
+                          </span>
                           <span className="text-base font-mono font-bold text-blue-800">{formatTime(restSeconds)}</span>
                         </div>
                       )}
@@ -1518,8 +1577,7 @@ function App() {
         </>
       )}
 
-      {/* TRAINING ANSICHT & VERLAUF bleiben unverändert */}
-      {/* ... (Hier folgen die anderen Views, die schon korrekt waren) */}
+      {/* TRAINING ANSICHT */}
       {activeTab === 'training' && (
         <>
           <header className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 pb-6 shadow-lg text-white">
@@ -1621,8 +1679,8 @@ function App() {
           <div className="p-4 -mt-8 space-y-4">
             {history.length === 0 ? (
               <div className="text-center py-20 text-gray-400 bg-white rounded-3xl shadow-sm border border-gray-100">
-                 <CalendarDays size={48} className="mx-auto mb-4 text-gray-200" strokeWidth={1} />
-                 <p>Noch kein Training abgeschlossen.</p>
+                  <CalendarDays size={48} className="mx-auto mb-4 text-gray-200" strokeWidth={1} />
+                  <p>Noch kein Training abgeschlossen.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -1634,10 +1692,10 @@ function App() {
                   >
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                         <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <CheckCircle2 size={10} /> Abgeschlossen
-                         </span>
-                         <span className="text-[10px] font-bold text-gray-400">{formatDate(entry.date)}</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                             <CheckCircle2 size={10} /> Abgeschlossen
+                          </span>
+                          <span className="text-[10px] font-bold text-gray-400">{formatDate(entry.date)}</span>
                       </div>
                       <h3 className="font-bold text-gray-900 text-lg">{entry.workoutTitle}</h3>
                       <p className="text-xs text-gray-500 mt-1">Woche {entry.week} • {entry.type}</p>
