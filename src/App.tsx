@@ -28,109 +28,28 @@ import { ExitDialog } from './components/ExitDialog';
 import { PromptModal } from './components/PromptModal';
 import { EquipmentModal } from './components/EquipmentModal';
 
-// --- HILFSFUNKTION: Statisches Warm-up generieren ---
+// --- HELPER FUNCTIONS ---
+
 const getStaticWarmup = (focus: string) => {
   const focusLower = focus?.toLowerCase() || "";
-
   if (focusLower.includes("leg") || focusLower.includes("bein") || focusLower.includes("unterkörper")) {
-    return `🔥 BEIN-FOKUS WARM-UP (RAMP)
-
-1. PULS (2 Min)
-• 1 Min Joggen auf der Stelle
-• 1 Min Jumping Jacks
-
-2. MOBILISIERUNG (2 Min)
-• 10x Leg Swings (vor/zurück pro Bein)
-• 10x Leg Swings (seitlich pro Bein)
-• 10x Tiefe Hocke (Deep Squat Hold) - wippend
-
-3. AKTIVIERUNG (1 Min)
-• 20x Glute Bridges (Hüftheben)
-• 10x Bodyweight Lunges pro Seite`;
+    return `🔥 BEIN-FOKUS WARM-UP (RAMP)\n\n1. PULS (2 Min)\n• 1 Min Joggen auf der Stelle\n• 1 Min Jumping Jacks\n\n2. MOBILISIERUNG (2 Min)\n• 10x Leg Swings (vor/zurück pro Bein)\n• 10x Leg Swings (seitlich pro Bein)\n• 10x Tiefe Hocke (Deep Squat Hold)\n\n3. AKTIVIERUNG (1 Min)\n• 20x Glute Bridges\n• 10x Bodyweight Lunges`;
   }
-
   if (focusLower.includes("push") || focusLower.includes("pull") || focusLower.includes("upper") || focusLower.includes("oberkörper")) {
-    return `🔥 OBERKÖRPER WARM-UP (RAMP)
-
-1. PULS (2 Min)
-• 1 Min Seilspringen (oder Fake Jump Rope)
-• 1 Min Armkreisen (klein zu groß)
-
-2. MOBILISIERUNG (2 Min)
-• 10x Wall Slides (Rücken an Wand, Arme hoch)
-• 10x Cat-Cow Stretch (Vierfüßlerstand)
-• 10x Thoracic Rotation (Vierfüßler, aufdrehen)
-
-3. AKTIVIERUNG (1 Min)
-• 10x Band Pull-Aparts (oder Reverse Flys ohne Gewicht)
-• 10x Scapular Push Ups (nur Schulterblätter bewegen)`;
+    return `🔥 OBERKÖRPER WARM-UP (RAMP)\n\n1. PULS (2 Min)\n• 1 Min Seilspringen\n• 1 Min Armkreisen\n\n2. MOBILISIERUNG (2 Min)\n• 10x Wall Slides\n• 10x Cat-Cow Stretch\n• 10x Thoracic Rotation\n\n3. AKTIVIERUNG (1 Min)\n• 10x Band Pull-Aparts\n• 10x Scapular Push Ups`;
   }
-
-  return `🔥 GENERAL WARM-UP (RAMP)
-
-1. RAISE (2 Min)
-• 30sek High Knees
-• 30sek Butt Kicks
-• 1 Min Hampelmann
-
-2. MOBILIZE (2 Min)
-• 10x World's Greatest Stretch (Ausfallschritt + Aufdrehen)
-• 10x Raupengang (Walkouts)
-
-3. ACTIVATE (1 Min)
-• 15x Air Squats
-• 10x Plank zu Downward Dog Wechsel`;
+  return `🔥 GENERAL WARM-UP (RAMP)\n\n1. RAISE (2 Min)\n• 30sek High Knees\n• 30sek Butt Kicks\n• 1 Min Hampelmann\n\n2. MOBILIZE (2 Min)\n• 10x World's Greatest Stretch\n• 10x Raupengang\n\n3. ACTIVATE (1 Min)\n• 15x Air Squats\n• 10x Plank zu Downward Dog`;
 };
 
-// --- HILFSFUNKTION: Statisches Cool Down generieren ---
 const getStaticCooldown = (focus: string) => {
   const focusLower = focus?.toLowerCase() || "";
-
   if (focusLower.includes("leg") || focusLower.includes("bein") || focusLower.includes("unterkörper")) {
-    return `❄️ BEIN-FOKUS COOL DOWN
-
-1. HÜFTE & GESÄSS (2 Min)
-• Pigeon Pose (Taube) - 1 Min pro Seite
-• Couch Stretch (Hüftbeuger an Wand) - 1 Min pro Seite
-
-2. OBERSCHENKEL (2 Min)
-• Standing Quad Stretch (Ferse zum Po) - 45s pro Seite
-• Seated Hamstring Stretch (Vorbeuge im Sitzen) - 90s halten
-
-3. RELAX (1 Min)
-• Legs Up The Wall (Beine an Wand hochlegen)
-• Tiefes Atmen in den Bauch`;
+    return `❄️ BEIN-FOKUS COOL DOWN\n\n1. HÜFTE & GESÄSS (2 Min)\n• Pigeon Pose (Taube)\n• Couch Stretch\n\n2. OBERSCHENKEL (2 Min)\n• Standing Quad Stretch\n• Seated Hamstring Stretch\n\n3. RELAX (1 Min)\n• Legs Up The Wall`;
   }
-
   if (focusLower.includes("push") || focusLower.includes("pull") || focusLower.includes("upper") || focusLower.includes("oberkörper")) {
-    return `❄️ OBERKÖRPER COOL DOWN
-
-1. BRUST & SCHULTERN (2 Min)
-• Doorway Stretch (Arme im Türrahmen) - 1 Min halten
-• Cross-Body Shoulder Stretch - 30s pro Seite
-
-2. RÜCKEN (2 Min)
-• Child's Pose (Kindhaltung, Arme weit vor) - 1 Min
-• Lat Stretch (Arm über Kopf zur Seite neigen) - 30s pro Seite
-• Thread the Needle (Vierfüßler, durchfädeln) - 30s pro Seite
-
-3. NACKEN (1 Min)
-• Sanftes Nacken-Neigen (Ohr zur Schulter) - Vorsichtig!`;
+    return `❄️ OBERKÖRPER COOL DOWN\n\n1. BRUST & SCHULTERN (2 Min)\n• Doorway Stretch\n• Cross-Body Shoulder Stretch\n\n2. RÜCKEN (2 Min)\n• Child's Pose\n• Lat Stretch\n\n3. NACKEN (1 Min)\n• Sanftes Nacken-Neigen`;
   }
-
-  return `❄️ GENERAL COOL DOWN
-
-1. POSTERIOR CHAIN (2 Min)
-• Standing Forward Fold (Vorbeuge im Stand, Knie leicht gebeugt) - entspannt aushängen
-• Downward Dog (Herabschauender Hund) - Waden dehnen
-
-2. SPINE & HIPS (2 Min)
-• World's Greatest Stretch (langsam halten)
-• Spinal Twist im Liegen (Knie zur Seite fallen lassen)
-
-3. ATMEN & ENTSPANNEN (1 Min)
-• Corpse Pose (Savasana) - flach liegen, Augen zu
-• Box Breathing (4s Ein, 4s Halten, 4s Aus, 4s Halten)`;
+  return `❄️ GENERAL COOL DOWN\n\n1. POSTERIOR CHAIN (2 Min)\n• Standing Forward Fold\n• Downward Dog\n\n2. SPINE & HIPS (2 Min)\n• Spinal Twist im Liegen\n\n3. ATMEN (1 Min)\n• Corpse Pose (Savasana)`;
 };
 
 function App() {
@@ -139,7 +58,7 @@ function App() {
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<number | null>(null);
   const [previewWorkout, setPreviewWorkout] = useState<any>(null);
 
-  // State für Routinen
+  // States
   const [currentWarmupRoutine, setCurrentWarmupRoutine] = useState("");
   const [currentCooldownRoutine, setCurrentCooldownRoutine] = useState("");
 
@@ -149,8 +68,20 @@ function App() {
     return prepareData(rawWorkouts);
   });
 
-  // HIER IST DIE VARIABLE, DIE VORHER GEFEHLT HAT:
+  // --- HIER WURDE DER FEHLER BEHOBEN ---
   const visibleWorkouts = data.filter((workout: any) => workout.week === activeWeek);
+  
+  const [history, setHistory] = useState<any[]>(() => {
+    const savedHistory = localStorage.getItem('coachAndyHistory');
+    if (savedHistory) return JSON.parse(savedHistory);
+    return [];
+  });
+
+  // --- DIESE FUNKTION FEHLTE VORHER ---
+  const isWorkoutCompleted = (workoutId: number) => {
+    return history.some((entry: any) => entry.workoutId === workoutId);
+  };
+  // ------------------------------------
 
   const [systemPrompt, setSystemPrompt] = useState(() => {
       const saved = localStorage.getItem('coachAndyPrompt');
@@ -179,7 +110,6 @@ function App() {
 
   const [activeWorkoutData, setActiveWorkoutData] = useState<any>(null);
   
-  // WORKOUT PHASES
   const [isWarmupActive, setIsWarmupActive] = useState(false);
   const [isCooldownActive, setIsCooldownActive] = useState(false); 
   const [elapsedWarmupTime, setElapsedWarmupTime] = useState(0); 
@@ -191,19 +121,12 @@ function App() {
   
   const [activePromptModal, setActivePromptModal] = useState<string | null>(null); 
 
-  const [history, setHistory] = useState<any[]>(() => {
-    const savedHistory = localStorage.getItem('coachAndyHistory');
-    if (savedHistory) return JSON.parse(savedHistory);
-    return [];
-  });
-
   const [restSeconds, setRestSeconds] = useState(0); 
   const [isRestActive, setIsRestActive] = useState(false);
   const [activeRestContext, setActiveRestContext] = useState({ exerciseIndex: -1, setIndex: -1 });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-Resume
   useEffect(() => {
     const savedActiveState = localStorage.getItem('coachAndyActiveState');
     if (savedActiveState && !activeWorkoutData) {
@@ -215,7 +138,6 @@ function App() {
                 
                 const specificWarmup = getStaticWarmup(parsedState.focus);
                 setCurrentWarmupRoutine(specificWarmup);
-
                 const specificCooldown = getStaticCooldown(parsedState.focus);
                 setCurrentCooldownRoutine(specificCooldown);
 
@@ -336,7 +258,6 @@ function App() {
 
       const specificWarmup = getStaticWarmup(originalWorkout.focus);
       setCurrentWarmupRoutine(specificWarmup); 
-
       const specificCooldown = getStaticCooldown(originalWorkout.focus);
       setCurrentCooldownRoutine(specificCooldown);
 
