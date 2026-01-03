@@ -66,7 +66,6 @@ const getStaticWarmup = (focus: string) => {
 • 10x Scapular Push Ups (nur Schulterblätter bewegen)`;
   }
 
-  // Fallback / Ganzkörper
   return `🔥 GENERAL WARM-UP (RAMP)
 
 1. RAISE (2 Min)
@@ -83,7 +82,7 @@ const getStaticWarmup = (focus: string) => {
 • 10x Plank zu Downward Dog Wechsel`;
 };
 
-// --- NEU: HILFSFUNKTION: Statisches Cool Down generieren ---
+// --- HILFSFUNKTION: Statisches Cool Down generieren ---
 const getStaticCooldown = (focus: string) => {
   const focusLower = focus?.toLowerCase() || "";
 
@@ -119,7 +118,6 @@ const getStaticCooldown = (focus: string) => {
 • Sanftes Nacken-Neigen (Ohr zur Schulter) - Vorsichtig!`;
   }
 
-  // Fallback / Ganzkörper
   return `❄️ GENERAL COOL DOWN
 
 1. POSTERIOR CHAIN (2 Min)
@@ -143,13 +141,16 @@ function App() {
 
   // State für Routinen
   const [currentWarmupRoutine, setCurrentWarmupRoutine] = useState("");
-  const [currentCooldownRoutine, setCurrentCooldownRoutine] = useState(""); // <--- NEU
+  const [currentCooldownRoutine, setCurrentCooldownRoutine] = useState("");
 
   const [data, setData] = useState(() => {
     const savedData = localStorage.getItem('coachAndyData');
     if (savedData) return JSON.parse(savedData);
     return prepareData(rawWorkouts);
   });
+
+  // HIER IST DIE VARIABLE, DIE VORHER GEFEHLT HAT:
+  const visibleWorkouts = data.filter((workout: any) => workout.week === activeWeek);
 
   const [systemPrompt, setSystemPrompt] = useState(() => {
       const saved = localStorage.getItem('coachAndyPrompt');
@@ -212,11 +213,10 @@ function App() {
                 setActiveWorkoutData(parsedState);
                 setSelectedWorkoutId(parsedState.id);
                 
-                // Routinen wiederherstellen
                 const specificWarmup = getStaticWarmup(parsedState.focus);
                 setCurrentWarmupRoutine(specificWarmup);
 
-                const specificCooldown = getStaticCooldown(parsedState.focus); // <--- NEU
+                const specificCooldown = getStaticCooldown(parsedState.focus);
                 setCurrentCooldownRoutine(specificCooldown);
 
                 setIsWarmupActive(false); 
@@ -334,13 +334,11 @@ function App() {
       setActiveWorkoutData(JSON.parse(JSON.stringify(originalWorkout)));
       setSelectedWorkoutId(id);
 
-      // --- HIER WERDEN BEIDE ROUTINEN GENERIERT ---
       const specificWarmup = getStaticWarmup(originalWorkout.focus);
       setCurrentWarmupRoutine(specificWarmup); 
 
-      const specificCooldown = getStaticCooldown(originalWorkout.focus); // <--- NEU
+      const specificCooldown = getStaticCooldown(originalWorkout.focus);
       setCurrentCooldownRoutine(specificCooldown);
-      // -------------------------------------------
 
       setIsWarmupActive(true);
       setIsCooldownActive(false); 
@@ -516,8 +514,6 @@ function App() {
       }
   }
 
-  const isWorkoutCompleted = (workoutId: number) => history.some((entry: any) => entry.workoutId === workoutId);
-
   const ExitDialogComponent = (
     <ExitDialog 
         isOpen={showExitDialog} 
@@ -545,11 +541,7 @@ function App() {
       return (
           <>
             {ExitDialogComponent}
-            {/* WICHTIG: Hier wird jetzt currentCooldownRoutine übergeben */}
-            <CooldownScreen 
-                prompt={currentCooldownRoutine} 
-                onComplete={handleFinalizeWorkout} 
-            />
+            <CooldownScreen prompt={currentCooldownRoutine} onComplete={handleFinalizeWorkout} />
           </>
       )
   }
