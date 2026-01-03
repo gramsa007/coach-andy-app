@@ -68,7 +68,6 @@ function App() {
     return prepareData(rawWorkouts);
   });
 
-  // --- HIER WURDE DER FEHLER BEHOBEN ---
   const visibleWorkouts = data.filter((workout: any) => workout.week === activeWeek);
   
   const [history, setHistory] = useState<any[]>(() => {
@@ -77,11 +76,9 @@ function App() {
     return [];
   });
 
-  // --- DIESE FUNKTION FEHLTE VORHER ---
   const isWorkoutCompleted = (workoutId: number) => {
     return history.some((entry: any) => entry.workoutId === workoutId);
   };
-  // ------------------------------------
 
   const [systemPrompt, setSystemPrompt] = useState(() => {
       const saved = localStorage.getItem('coachAndyPrompt');
@@ -546,7 +543,14 @@ function App() {
           {activeTab === 'profile' && (
             <>
               <header className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 pb-12 text-white shadow-lg">
-                 <div className="flex justify-between items-center"><div><h1 className="text-3xl font-black tracking-tighter text-white">Coach Andy 2026</h1></div></div>
+                 {/* HIER IST DIE ÄNDERUNG: Zentriert, größer, ohne 2026 */}
+                 <div className="flex justify-center items-center">
+                     <div>
+                        <h1 className="text-5xl font-black tracking-tighter text-white text-center">
+                            Coach Andy
+                        </h1>
+                     </div>
+                 </div>
               </header>
               <div className="p-6 -mt-8 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
