@@ -276,6 +276,12 @@ function App() {
       return savedEq ? JSON.parse(savedEq) : DEFAULT_EQUIPMENT;
   });
 
+  const handleSaveSystemPrompt = (newText: string) => { setSystemPrompt(newText); localStorage.setItem('coachAndyPrompt', newText); };
+  const handleSaveWarmupPrompt = (newText: string) => { setWarmupPrompt(newText); localStorage.setItem('coachAndyWarmupPrompt', newText); };
+  const handleSaveCooldownPrompt = (newText: string) => { setCooldownPrompt(newText); localStorage.setItem('coachAndyCooldownPrompt', newText); };
+  const handleSavePlanPrompt = (newText: string) => { setPlanPrompt(newText); localStorage.setItem('coachAndyPlanPrompt', newText); };
+  const handleSaveEquipment = (newEquipment: any[]) => { setEquipment(newEquipment); localStorage.setItem('coachAndyEquipment', JSON.stringify(newEquipment)); };
+
   const handleSaveCustomLog = (title: string, duration: string, note: string) => {
       const newEntry = {
           id: Date.now(),
@@ -434,12 +440,6 @@ function App() {
   };
 
   const chartData = getLastWorkoutsVolume();
-
-  const handleSaveSystemPrompt = (newText: string) => { setSystemPrompt(newText); localStorage.setItem('coachAndyPrompt', newText); };
-  const handleSaveWarmupPrompt = (newText: string) => { setWarmupPrompt(newText); localStorage.setItem('coachAndyWarmupPrompt', newText); };
-  const handleSaveCooldownPrompt = (newText: string) => { setCooldownPrompt(newText); localStorage.setItem('coachAndyCooldownPrompt', newText); };
-  const handleSavePlanPrompt = (newText: string) => { setPlanPrompt(newText); localStorage.setItem('coachAndyPlanPrompt', newText); };
-  const handleSaveEquipment = (newEquipment: any[]) => { setEquipment(newEquipment); localStorage.setItem('coachAndyEquipment', JSON.stringify(newEquipment)); };
 
   const startWorkout = (id: number) => {
     setPreviewWorkout(null);
@@ -744,10 +744,38 @@ function App() {
             history={history} 
         />
 
+        {/* MODALS FÜR PROMPTS */}
         <PromptModal isOpen={activePromptModal === 'system'} onClose={() => setActivePromptModal(null)} title="Coach Philosophie" icon={FileText} colorClass="bg-gradient-to-r from-blue-600 to-indigo-700" currentPrompt={systemPrompt} onSave={handleSaveSystemPrompt} />
         <PromptModal isOpen={activePromptModal === 'warmup'} onClose={() => setActivePromptModal(null)} title="Warm-up Prompt" icon={Zap} colorClass="bg-gradient-to-r from-orange-500 to-red-600" currentPrompt={warmupPrompt} onSave={handleSaveWarmupPrompt} />
         <PromptModal isOpen={activePromptModal === 'cooldown'} onClose={() => setActivePromptModal(null)} title="Cool Down Prompt" icon={Wind} colorClass="bg-gradient-to-r from-teal-500 to-cyan-600" currentPrompt={cooldownPrompt} onSave={handleSaveCooldownPrompt} />
-        <PromptModal isOpen={activePromptModal === 'plan'} onClose={() => setActivePromptModal(null)} title="Plan erstellen" icon={Sparkles} colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" currentPrompt={planPrompt} onSave={handleSavePlanPrompt} appendEquipment={true} equipment={equipment} appendHistory={true} history={history} />
+        
+        {/* MODAL FÜR DAS EDITIEREN VOM PLAN PROMPT (SETTINGS) - Ohne History Append */}
+        <PromptModal 
+            isOpen={activePromptModal === 'editPlan'} 
+            onClose={() => setActivePromptModal(null)} 
+            title="Plan Prompt bearbeiten" 
+            icon={Sparkles} 
+            colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" 
+            currentPrompt={planPrompt} 
+            onSave={handleSavePlanPrompt} 
+            // HIER IST DER TRICK: Kein appendEquipment, kein appendHistory
+        />
+
+        {/* MODAL FÜR DAS GENERIEREN VOM PLAN (BUTTON) - Mit History Append */}
+        <PromptModal 
+            isOpen={activePromptModal === 'plan'} 
+            onClose={() => setActivePromptModal(null)} 
+            title="Plan erstellen" 
+            icon={Sparkles} 
+            colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" 
+            currentPrompt={planPrompt} 
+            onSave={handleSavePlanPrompt} 
+            appendEquipment={true} 
+            equipment={equipment} 
+            appendHistory={true} 
+            history={history} 
+        />
+
         <EquipmentModal isOpen={showEquipmentModal} onClose={() => setShowEquipmentModal(false)} equipment={equipment} onSave={handleSaveEquipment} />
         <PastePlanModal isOpen={showPastePlanModal} onClose={() => setShowPastePlanModal(false)} onImport={handlePasteImport} />
         
@@ -798,8 +826,8 @@ function App() {
                 {/* SETTINGS LISTE */}
                 <div onClick={() => setActivePromptModal('system')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-blue-100 text-blue-600 p-2 rounded-xl"><FileText size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Coach Philosophie</h3><p className="text-xs text-gray-500">Identität & Regeln definieren</p></div></div><ChevronRight className="text-gray-300" /></div>
                 
-                {/* NEU: PLAN PROMPT HIER IN DER LISTE */}
-                <div onClick={() => setActivePromptModal('plan')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Plan Generator Prompt</h3><p className="text-xs text-gray-500">KI-Anweisung für Pläne</p></div></div><ChevronRight className="text-gray-300" /></div>
+                {/* HIER: DER GEÄNDERTE EINTRAG FÜR PLAN SETTINGS (Mode 'editPlan' statt 'plan') */}
+                <div onClick={() => setActivePromptModal('editPlan')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Plan Generator Prompt</h3><p className="text-xs text-gray-500">KI-Anweisung für Pläne</p></div></div><ChevronRight className="text-gray-300" /></div>
 
                 <div onClick={() => setActivePromptModal('warmup')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-orange-100 text-orange-600 p-2 rounded-xl"><Zap size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Warm-up Prompt</h3><p className="text-xs text-gray-500">Aufwärm-Routine anpassen</p></div></div><ChevronRight className="text-gray-300" /></div>
                 <div onClick={() => setActivePromptModal('cooldown')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-teal-100 text-teal-600 p-2 rounded-xl"><Wind size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Cool Down Prompt</h3><p className="text-xs text-gray-500">Regeneration anpassen</p></div></div><ChevronRight className="text-gray-300" /></div>
