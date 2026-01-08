@@ -88,7 +88,6 @@ const CooldownScreen = ({ prompt, onComplete }: any) => {
 const PromptModal = ({ onClose, title, icon: Icon, colorClass, currentPrompt, onSave, appendEquipment, equipment, appendHistory, history }: any) => {
     const [text, setText] = useState(currentPrompt);
     
-    // Initialisierung beim Mounten (jedes Mal frisch)
     useEffect(() => {
         let generatedText = currentPrompt;
         if (appendEquipment && equipment) {
@@ -140,7 +139,6 @@ const EquipmentModal = ({ onClose, equipment, onSave }: any) => {
     const [items, setItems] = useState<string[]>([]);
     const [newItem, setNewItem] = useState("");
     
-    // Initialisierung beim Mounten
     useEffect(() => { 
         if (equipment && Array.isArray(equipment)) {
             setItems([...equipment]);
@@ -281,11 +279,11 @@ function App() {
   const [currentWarmupRoutine, setCurrentWarmupRoutine] = useState("");
   const [currentCooldownRoutine, setCurrentCooldownRoutine] = useState("");
   
-  // States für Modals
   const [showCustomLogModal, setShowCustomLogModal] = useState(false);
   const [showEquipmentModal, setShowEquipmentModal] = useState(false);
   const [showPastePlanModal, setShowPastePlanModal] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
+  
   const [activePromptModal, setActivePromptModal] = useState<string | null>(null); 
   const [analysisExercise, setAnalysisExercise] = useState<string | null>(null);
 
@@ -336,6 +334,17 @@ function App() {
         }
     }
     return { currentStreak: current };
+  };
+
+  const getStats = () => {
+    const total = history.length;
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
+    const monday = new Date(now.setDate(diff));
+    monday.setHours(0,0,0,0);
+    const thisWeek = history.filter((h: any) => new Date(h.date) >= monday).length;
+    return { total, thisWeek };
   };
 
   const [systemPrompt, setSystemPrompt] = useState(() => {
@@ -394,9 +403,11 @@ function App() {
   };
 
   const [activeWorkoutData, setActiveWorkoutData] = useState<any>(null);
+  
   const [isWarmupActive, setIsWarmupActive] = useState(false);
   const [isCooldownActive, setIsCooldownActive] = useState(false); 
   const [elapsedWarmupTime, setElapsedWarmupTime] = useState(0); 
+  
   const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<any>(null); 
 
   const [restSeconds, setRestSeconds] = useState(0); 
@@ -404,18 +415,6 @@ function App() {
   const [activeRestContext, setActiveRestContext] = useState({ exerciseIndex: -1, setIndex: -1 });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // --- HIER EINFÜGEN: Die fehlende Statistik-Funktion ---
-  const getStats = () => {
-    const total = history.length;
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
-    const monday = new Date(now.setDate(diff));
-    monday.setHours(0,0,0,0);
-    const thisWeek = history.filter((h: any) => new Date(h.date) >= monday).length;
-    return { total, thisWeek };
-  };
-  // -----------------------------------------------------
 
   useEffect(() => {
     const savedActiveState = localStorage.getItem('coachAndyActiveState');
@@ -724,7 +723,6 @@ function App() {
             {ExitDialogComponent}
             <WarmupScreen 
                 prompt={currentWarmupRoutine} 
-                // FIX: TYPE ERROR - elapsed is implicitly any. Fixed by casting to number.
                 onComplete={(elapsed: number) => { setElapsedWarmupTime(elapsed); setIsWarmupActive(false); }}
                 onBack={handleBackRequest}
             />
@@ -746,7 +744,7 @@ function App() {
       <div className="min-h-screen bg-neutral-900 flex justify-center font-sans">
         <div className="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl overflow-hidden">
           {ExitDialogComponent}
-          {/* FIX: CONDITIONAL RENDERING FOR MODALS */}
+          
           {analysisExercise && <ExerciseAnalysisModal onClose={() => setAnalysisExercise(null)} exerciseName={analysisExercise} history={history} />}
           
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-2 px-4 sticky top-0 z-10 shadow-lg">
@@ -813,23 +811,19 @@ function App() {
       
       <div className="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl overflow-hidden">
         
-        {/* MODALS - ALLE HIER MIT KONDITIONALEM RENDERING (WICHTIG!) */}
+        {/* MODALS */}
         {showCustomLogModal && <CustomLogModal onClose={() => setShowCustomLogModal(false)} onSave={handleSaveCustomLog} />}
         
         {analysisExercise && <ExerciseAnalysisModal onClose={() => setAnalysisExercise(null)} exerciseName={analysisExercise} history={history} />}
 
-        {/* MODALS FÜR PROMPTS */}
         {activePromptModal === 'system' && <PromptModal onClose={() => setActivePromptModal(null)} title="Coach Philosophie" icon={FileText} colorClass="bg-gradient-to-r from-blue-600 to-indigo-700" currentPrompt={systemPrompt} onSave={handleSaveSystemPrompt} />}
         {activePromptModal === 'warmup' && <PromptModal onClose={() => setActivePromptModal(null)} title="Warm-up Prompt" icon={Zap} colorClass="bg-gradient-to-r from-orange-500 to-red-600" currentPrompt={warmupPrompt} onSave={handleSaveWarmupPrompt} />}
         {activePromptModal === 'cooldown' && <PromptModal onClose={() => setActivePromptModal(null)} title="Cool Down Prompt" icon={Wind} colorClass="bg-gradient-to-r from-teal-500 to-cyan-600" currentPrompt={cooldownPrompt} onSave={handleSaveCooldownPrompt} />}
         
-        {/* SETTINGS PROMPT */}
         {activePromptModal === 'editPlan' && <PromptModal onClose={() => setActivePromptModal(null)} title="Plan Prompt bearbeiten" icon={Sparkles} colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" currentPrompt={planPrompt} onSave={handleSavePlanPrompt} />}
 
-        {/* GENERATOR PROMPT (Button oben) */}
         {activePromptModal === 'plan' && <PromptModal onClose={() => setActivePromptModal(null)} title="Plan erstellen" icon={Sparkles} colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" currentPrompt={planPrompt} onSave={handleSavePlanPrompt} appendEquipment={true} equipment={equipment} appendHistory={true} history={history} />}
 
-        {/* EQUIPMENT MODAL - HIER SICHER PLATZIERT */}
         {showEquipmentModal && <EquipmentModal onClose={() => setShowEquipmentModal(false)} equipment={equipment} onSave={handleSaveEquipment} />}
         
         {showPastePlanModal && <PastePlanModal onClose={() => setShowPastePlanModal(false)} onImport={handlePasteImport} />}
@@ -868,7 +862,6 @@ function App() {
                      <div className="bg-white p-4 rounded-3xl shadow-md border border-gray-100 flex flex-col justify-center items-center"><Flame className="text-orange-500 mb-2 drop-shadow-sm" size={28} /><span className="text-3xl font-black text-gray-900 leading-none">{getStreakStats().currentStreak}</span><span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">Tage Streak</span></div>
                 </div>
                 
-                {/* CLOUD SYNC BOX */}
                 <div className="bg-slate-900 rounded-3xl p-6 relative overflow-hidden text-white shadow-xl flex flex-col items-center justify-between gap-3 h-auto">
                    <Cloud className="absolute -left-4 -bottom-4 text-white opacity-5 w-32 h-32" />
                    <div className="relative z-10 w-full flex justify-between items-center">
@@ -884,13 +877,13 @@ function App() {
                    </button>
                 </div>
 
-                {/* MENÜ LISTE - JETZT MIT BUTTONS STATT DIVS */}
-                <button onClick={() => setActivePromptModal('plan')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-blue-50 text-blue-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Neuer 4-Wochen-Plan</h3><p className="text-xs text-gray-500">Erstelle einen neuen Plan mit KI</p></div></div><div className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-3 rounded-xl shadow-md"><ChevronRight size={20} /></div></button>
-                <button onClick={() => setShowEquipmentModal(true)} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Package size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Mein Equipment</h3><p className="text-xs text-gray-500">Verfügbares Trainingsgerät</p></div></div><ChevronRight className="text-gray-300" /></button>
-                <button onClick={() => setActivePromptModal('system')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-blue-100 text-blue-600 p-2 rounded-xl"><FileText size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Coach Philosophie</h3><p className="text-xs text-gray-500">Identität & Regeln definieren</p></div></div><ChevronRight className="text-gray-300" /></button>
-                <button onClick={() => setActivePromptModal('editPlan')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Plan Generator Prompt</h3><p className="text-xs text-gray-500">KI-Anweisung für Pläne</p></div></div><ChevronRight className="text-gray-300" /></button>
-                <button onClick={() => setActivePromptModal('warmup')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-orange-100 text-orange-600 p-2 rounded-xl"><Zap size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Warm-up Prompt</h3><p className="text-xs text-gray-500">Aufwärm-Routine anpassen</p></div></div><ChevronRight className="text-gray-300" /></button>
-                <button onClick={() => setActivePromptModal('cooldown')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-teal-100 text-teal-600 p-2 rounded-xl"><Wind size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Cool Down Prompt</h3><p className="text-xs text-gray-500">Regeneration anpassen</p></div></div><ChevronRight className="text-gray-300" /></button>
+                {/* HIER SIND DIE REPARIERTEN MENÜ-PUNKTE (div + onClick statt button) */}
+                <div onClick={() => setActivePromptModal('plan')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-blue-50 text-blue-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Neuer 4-Wochen-Plan</h3><p className="text-xs text-gray-500">Erstelle einen neuen Plan mit KI</p></div></div><div className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-3 rounded-xl shadow-md"><ChevronRight size={20} /></div></div>
+                <div onClick={() => setShowEquipmentModal(true)} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Package size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Mein Equipment</h3><p className="text-xs text-gray-500">Verfügbares Trainingsgerät</p></div></div><ChevronRight className="text-gray-300" /></div>
+                <div onClick={() => setActivePromptModal('system')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-blue-100 text-blue-600 p-2 rounded-xl"><FileText size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Coach Philosophie</h3><p className="text-xs text-gray-500">Identität & Regeln definieren</p></div></div><ChevronRight className="text-gray-300" /></div>
+                <div onClick={() => setActivePromptModal('editPlan')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Plan Generator Prompt</h3><p className="text-xs text-gray-500">KI-Anweisung für Pläne</p></div></div><ChevronRight className="text-gray-300" /></div>
+                <div onClick={() => setActivePromptModal('warmup')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-orange-100 text-orange-600 p-2 rounded-xl"><Zap size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Warm-up Prompt</h3><p className="text-xs text-gray-500">Aufwärm-Routine anpassen</p></div></div><ChevronRight className="text-gray-300" /></div>
+                <div onClick={() => setActivePromptModal('cooldown')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-teal-100 text-teal-600 p-2 rounded-xl"><Wind size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Cool Down Prompt</h3><p className="text-xs text-gray-500">Regeneration anpassen</p></div></div><ChevronRight className="text-gray-300" /></div>
                 
                 <div className="pt-6 pb-4 flex flex-col gap-3 items-center border-t border-gray-200 mt-4"><button onClick={handleClearPlan} className="text-orange-400 text-xs font-bold flex items-center gap-1 hover:text-orange-600 transition-colors"><AlertTriangle size={12} /> Nur Plan löschen (Verlauf behalten)</button><button onClick={handleReset} className="text-red-400 text-xs font-bold flex items-center gap-1 hover:text-red-600 transition-colors"><Trash2 size={12} /> Alles zurücksetzen (Hard Reset)</button></div>
               </div>
