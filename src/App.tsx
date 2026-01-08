@@ -5,10 +5,10 @@ import {
   Dumbbell, ArrowLeft, Save, Flame, Download, Upload, UserCircle, Trash2, History,
   CheckCircle2, CheckSquare, CalendarDays, Cloud, Database, Clock, Target, ChevronRight,
   FileText, Zap, Wind, Sparkles, ClipboardCheck, Package, Volume2, Trophy, AlertTriangle,
-  Eye, X, BarChart3, FileSpreadsheet, PlusCircle, PenTool, Youtube, TrendingUp, Calendar, Copy
+  Eye, X, BarChart3, FileSpreadsheet, PlusCircle, PenTool, Youtube, TrendingUp, Calendar, Play
 } from 'lucide-react';
 
-// Imports utils
+// Imports utils (diese Dateien hast du ja schon)
 import { playBeep } from './utils/audio';
 import { prepareData, formatTime, formatDate } from './utils/helpers';
 import { 
@@ -20,7 +20,7 @@ import {
     rawWorkouts 
 } from './utils/constants';
 
-// --- COMPONENTS ---
+// --- INLINE COMPONENTS (Damit alles sicher funktioniert) ---
 
 const WorkoutTimer = ({ transparent = false, initialTime = 0 }: { transparent?: boolean, initialTime?: number }) => {
   const [seconds, setSeconds] = useState(initialTime);
@@ -32,9 +32,11 @@ const WorkoutTimer = ({ transparent = false, initialTime = 0 }: { transparent?: 
       interval = setInterval(() => {
         setSeconds((s) => s + 1);
       }, 1000);
+    } else if (!isActive && seconds !== 0) {
+      clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [isActive, seconds]);
 
   return (
     <div className={`flex items-center gap-2 ${transparent ? 'bg-white/10 text-white' : 'bg-white text-gray-800 border border-gray-200'} px-3 py-1.5 rounded-full shadow-sm`}>
@@ -46,7 +48,12 @@ const WorkoutTimer = ({ transparent = false, initialTime = 0 }: { transparent?: 
 
 const WarmupScreen = ({ prompt, onComplete, onBack }: any) => {
     const [seconds, setSeconds] = useState(0);
-    useEffect(() => { const interval = setInterval(() => setSeconds(s => s + 1), 1000); return () => clearInterval(interval); }, []);
+    
+    useEffect(() => {
+        const interval = setInterval(() => setSeconds(s => s + 1), 1000);
+        return () => clearInterval(interval);
+    }, []);
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-orange-500 to-red-600 text-white flex flex-col">
             <div className="p-4 flex justify-between items-center bg-white/10 backdrop-blur-md sticky top-0 z-10">
@@ -62,7 +69,9 @@ const WarmupScreen = ({ prompt, onComplete, onBack }: any) => {
                 </div>
             </div>
             <div className="p-4 bg-white/10 backdrop-blur-md sticky bottom-0">
-                <button onClick={() => onComplete(seconds)} className="w-full bg-white text-orange-600 font-black py-4 rounded-xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-wide text-lg"><Dumbbell size={24} /> Training Starten</button>
+                <button onClick={() => onComplete(seconds)} className="w-full bg-white text-orange-600 font-black py-4 rounded-xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-wide text-lg">
+                    <Dumbbell size={24} /> Training Starten
+                </button>
             </div>
         </div>
     );
@@ -79,32 +88,23 @@ const CooldownScreen = ({ prompt, onComplete }: any) => {
                 </div>
             </div>
             <div className="p-6 bg-white/10 backdrop-blur-md">
-                <button onClick={onComplete} className="w-full bg-white text-teal-600 font-black py-4 rounded-2xl shadow-xl hover:bg-teal-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-lg"><CheckCircle2 size={24} /> Workout Speichern</button>
+                <button onClick={onComplete} className="w-full bg-white text-teal-600 font-black py-4 rounded-2xl shadow-xl hover:bg-teal-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-lg">
+                    <CheckCircle2 size={24} /> Workout Speichern
+                </button>
             </div>
         </div>
     );
 };
 
-const PromptModal = ({ onClose, title, icon: Icon, colorClass, currentPrompt, onSave, appendEquipment, equipment, appendHistory, history }: any) => {
+const PromptModal = ({ isOpen, onClose, title, icon: Icon, colorClass, currentPrompt, onSave, appendEquipment, equipment, appendHistory, history }: any) => {
     const [text, setText] = useState(currentPrompt);
+    useEffect(() => { setText(currentPrompt); }, [currentPrompt]);
+    if (!isOpen) return null;
     
-    useEffect(() => {
-        let generatedText = currentPrompt;
-        if (appendEquipment && equipment) {
-            generatedText += `\n\nVerfügbares Equipment:\n` + equipment.join(', ');
-        }
-        if (appendHistory && history) {
-            const recentHistory = history.slice(0, 10).map((h: any) => 
-                `${new Date(h.date).toLocaleDateString()}: ${h.workoutTitle} (${h.type})`
-            ).join('\n');
-            generatedText += `\n\nTrainingshistorie (letzte Einheiten):\n` + recentHistory;
-        }
-        setText(generatedText);
-    }, [currentPrompt, appendEquipment, equipment, appendHistory, history]);
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(text);
-        alert("In Zwischenablage kopiert!");
+    const handleSave = () => {
+        // Hier wird nur der Text gespeichert (Regeln), nicht die generierten Daten!
+        onSave(text);
+        onClose();
     };
 
     return (
@@ -112,54 +112,31 @@ const PromptModal = ({ onClose, title, icon: Icon, colorClass, currentPrompt, on
             <div className="bg-white rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl animate-in zoom-in-95">
                 <div className={`${colorClass} p-4 text-white flex justify-between items-center rounded-t-3xl shrink-0`}>
                     <div className="flex items-center gap-2"><Icon size={20} /><h2 className="font-bold text-lg">{title}</h2></div>
-                    <div className="flex items-center gap-2">
-                        <button onClick={handleCopy} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors" title="Kopieren"><Copy size={18}/></button>
-                        <button onClick={onClose} className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors"><X size={18}/></button>
-                    </div>
+                    <button onClick={onClose} className="bg-white/20 p-1.5 rounded-full hover:bg-white/30"><X size={18}/></button>
                 </div>
                 <div className="p-4 overflow-y-auto flex-1">
-                    <p className="text-xs text-gray-500 mb-2 font-medium">
-                        {appendHistory ? "Dieser Text enthält deine Daten & Equipment. Kopiere ihn in ChatGPT:" : "Bearbeite hier die KI-Anweisungen (Prompt):"}
-                    </p>
+                    <p className="text-xs text-gray-500 mb-2 font-medium">Bearbeite hier die KI-Anweisungen (Prompt):</p>
                     <textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full h-64 p-3 border border-gray-200 rounded-xl text-sm font-mono bg-gray-50 focus:bg-white focus:border-blue-500 outline-none resize-none shadow-inner" spellCheck={false} />
                 </div>
-                <div className="p-4 border-t border-gray-100 shrink-0">
-                    {!appendHistory ? (
-                        <button onClick={() => { onSave(text); onClose(); }} className={`${colorClass} w-full py-3 rounded-xl text-white font-bold shadow-md active:scale-95 transition-transform`}>Speichern</button>
-                    ) : (
-                        <button onClick={onClose} className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold active:scale-95 transition-transform">Schließen</button>
-                    )}
-                </div>
+                <div className="p-4 border-t border-gray-100 shrink-0"><button onClick={handleSave} className={`${colorClass} w-full py-3 rounded-xl text-white font-bold shadow-md active:scale-95 transition-transform`}>Speichern</button></div>
             </div>
         </div>
     );
 };
 
-const EquipmentModal = ({ onClose, equipment, onSave }: any) => {
+const EquipmentModal = ({ isOpen, onClose, equipment, onSave }: any) => {
     const [items, setItems] = useState<string[]>([]);
     const [newItem, setNewItem] = useState("");
-    
-    useEffect(() => { 
-        if (equipment && Array.isArray(equipment)) {
-            setItems([...equipment]);
-        }
-    }, [equipment]);
-
+    useEffect(() => { if(equipment) setItems(equipment); }, [equipment]);
+    if (!isOpen) return null;
     const add = () => { if (newItem.trim()) { setItems([...items, newItem.trim()]); setNewItem(""); }};
     const remove = (idx: number) => { setItems(items.filter((_, i) => i !== idx)); };
     const save = () => { onSave(items); onClose(); };
-    
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-3xl w-full max-w-sm flex flex-col max-h-[80vh] shadow-2xl animate-in zoom-in-95">
-                <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl">
-                    <h2 className="text-xl font-black text-gray-800">Mein Equipment</h2>
-                    <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20} className="text-gray-500"/></button>
-                </div>
-                <div className="p-4 overflow-y-auto flex-1 space-y-2 bg-white">
-                    {items.length === 0 && <p className="text-center text-gray-400 text-sm py-4">Noch kein Equipment eingetragen.</p>}
-                    {items.map((item, i) => (<div key={i} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100"><span className="font-medium text-gray-700">{item}</span><button onClick={() => remove(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={18}/></button></div>))}
-                </div>
+            <div className="bg-white rounded-3xl w-full max-w-sm flex flex-col max-h-[80vh] shadow-2xl">
+                <div className="p-5 border-b border-gray-100"><h2 className="text-xl font-black text-gray-800">Mein Equipment</h2></div>
+                <div className="p-4 overflow-y-auto flex-1 space-y-2">{items.map((item, i) => (<div key={i} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100"><span className="font-medium text-gray-700">{item}</span><button onClick={() => remove(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={18}/></button></div>))}</div>
                 <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-3xl space-y-3">
                     <div className="flex gap-2"><input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Neues Gerät (z.B. Kettlebell)" className="flex-1 border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-500" /><button onClick={add} className="bg-indigo-600 text-white p-2 rounded-xl"><PlusCircle size={20}/></button></div>
                     <button onClick={save} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg">Speichern</button>
@@ -169,12 +146,13 @@ const EquipmentModal = ({ onClose, equipment, onSave }: any) => {
     );
 };
 
-const PastePlanModal = ({ onClose, onImport }: any) => {
+const PastePlanModal = ({ isOpen, onClose, onImport }: any) => {
     const [text, setText] = useState("");
+    if (!isOpen) return null;
     const handleImport = () => { try { const json = JSON.parse(text); onImport(json); onClose(); setText(""); } catch (e) { alert("Ungültiges JSON Format!"); }};
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden">
                 <div className="bg-emerald-600 p-4 text-white flex justify-between items-center"><h2 className="font-bold text-lg flex items-center gap-2"><ClipboardCheck/> Plan importieren</h2><button onClick={onClose}><X/></button></div>
                 <div className="p-4"><p className="text-xs text-gray-500 mb-2">Füge hier den JSON-Code von ChatGPT ein:</p><textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full h-40 p-3 border border-gray-200 rounded-xl text-xs font-mono bg-gray-50 outline-none resize-none" placeholder='[ { "id": 1, "title": "Push A", ... } ]'></textarea><button onClick={handleImport} className="w-full mt-4 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md">Plan laden</button></div>
             </div>
@@ -182,7 +160,8 @@ const PastePlanModal = ({ onClose, onImport }: any) => {
     );
 };
 
-const ExitDialog = ({ onSave, onDiscard, onCancel }: any) => {
+const ExitDialog = ({ isOpen, onSave, onDiscard, onCancel }: any) => {
+    if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
             <div className="bg-white rounded-3xl w-full max-w-xs shadow-2xl p-6 animate-in zoom-in-95">
@@ -193,10 +172,12 @@ const ExitDialog = ({ onSave, onDiscard, onCancel }: any) => {
     );
 };
 
-const CustomLogModal = ({ onClose, onSave }: any) => {
+const CustomLogModal = ({ isOpen, onClose, onSave }: any) => {
   const [title, setTitle] = useState("");
   const [duration, setDuration] = useState("");
   const [note, setNote] = useState("");
+
+  if (!isOpen) return null;
 
   const handleSubmit = () => {
     if (!title) return alert("Bitte gib einen Titel ein.");
@@ -223,7 +204,9 @@ const CustomLogModal = ({ onClose, onSave }: any) => {
   );
 };
 
-const ExerciseAnalysisModal = ({ onClose, exerciseName, history }: any) => {
+const ExerciseAnalysisModal = ({ isOpen, onClose, exerciseName, history }: any) => {
+  if (!isOpen || !exerciseName) return null;
+
   const dataPoints = history.map((h: any) => {
       if (!h.snapshot || !h.snapshot.exercises) return null;
       const ex = h.snapshot.exercises.find((e: any) => e.name === exerciseName);
@@ -253,7 +236,7 @@ const ExerciseAnalysisModal = ({ onClose, exerciseName, history }: any) => {
   );
 };
 
-// --- HELPER FUNCTIONS ---
+// --- HELPER FUNCTIONS (FALLBACK) ---
 const getStaticWarmup = (focus: string) => {
   const focusLower = focus?.toLowerCase() || "";
   if (focusLower.includes("leg") || focusLower.includes("bein") || focusLower.includes("unterkörper")) return `🔥 BEIN-FOKUS WARM-UP (RAMP)\n\n1. PULS (2 Min)\n• 1 Min Joggen\n• 1 Min Jumping Jacks\n\n2. MOBILISIERUNG\n• Leg Swings\n• Tiefe Hocke\n\n3. AKTIVIERUNG\n• Glute Bridges\n• Lunges`;
@@ -278,13 +261,8 @@ function App() {
 
   const [currentWarmupRoutine, setCurrentWarmupRoutine] = useState("");
   const [currentCooldownRoutine, setCurrentCooldownRoutine] = useState("");
-  
   const [showCustomLogModal, setShowCustomLogModal] = useState(false);
-  const [showEquipmentModal, setShowEquipmentModal] = useState(false);
-  const [showPastePlanModal, setShowPastePlanModal] = useState(false);
-  const [showExitDialog, setShowExitDialog] = useState(false);
   
-  const [activePromptModal, setActivePromptModal] = useState<string | null>(null); 
   const [analysisExercise, setAnalysisExercise] = useState<string | null>(null);
 
   const [data, setData] = useState(() => {
@@ -334,17 +312,6 @@ function App() {
         }
     }
     return { currentStreak: current };
-  };
-
-  const getStats = () => {
-    const total = history.length;
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
-    const monday = new Date(now.setDate(diff));
-    monday.setHours(0,0,0,0);
-    const thisWeek = history.filter((h: any) => new Date(h.date) >= monday).length;
-    return { total, thisWeek };
   };
 
   const [systemPrompt, setSystemPrompt] = useState(() => {
@@ -409,6 +376,11 @@ function App() {
   const [elapsedWarmupTime, setElapsedWarmupTime] = useState(0); 
   
   const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<any>(null); 
+  const [showExitDialog, setShowExitDialog] = useState(false);
+  const [showEquipmentModal, setShowEquipmentModal] = useState(false);
+  const [showPastePlanModal, setShowPastePlanModal] = useState(false); 
+  
+  const [activePromptModal, setActivePromptModal] = useState<string | null>(null); 
 
   const [restSeconds, setRestSeconds] = useState(0); 
   const [isRestActive, setIsRestActive] = useState(false);
@@ -416,6 +388,7 @@ function App() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-Resume
   useEffect(() => {
     const savedActiveState = localStorage.getItem('coachAndyActiveState');
     if (savedActiveState && !activeWorkoutData) {
@@ -463,6 +436,17 @@ function App() {
     }
     return () => clearInterval(interval);
   }, [isRestActive]);
+
+  const getStats = () => {
+    const total = history.length;
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
+    const monday = new Date(now.setDate(diff));
+    monday.setHours(0,0,0,0);
+    const thisWeek = history.filter((h: any) => new Date(h.date) >= monday).length;
+    return { total, thisWeek };
+  };
 
   const handleCSVExport = () => {
       if (history.length === 0) {
@@ -723,7 +707,7 @@ function App() {
             {ExitDialogComponent}
             <WarmupScreen 
                 prompt={currentWarmupRoutine} 
-                onComplete={(elapsed: number) => { setElapsedWarmupTime(elapsed); setIsWarmupActive(false); }}
+                onComplete={(elapsed) => { setElapsedWarmupTime(elapsed); setIsWarmupActive(false); }}
                 onBack={handleBackRequest}
             />
           </>
@@ -744,9 +728,12 @@ function App() {
       <div className="min-h-screen bg-neutral-900 flex justify-center font-sans">
         <div className="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl overflow-hidden">
           {ExitDialogComponent}
-          
-          {analysisExercise && <ExerciseAnalysisModal onClose={() => setAnalysisExercise(null)} exerciseName={analysisExercise} history={history} />}
-          
+          <ExerciseAnalysisModal 
+            isOpen={!!analysisExercise} 
+            onClose={() => setAnalysisExercise(null)} 
+            exerciseName={analysisExercise} 
+            history={history} 
+          />
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-2 px-4 sticky top-0 z-10 shadow-lg">
             <div className="flex justify-between items-center">
               <button onClick={handleBackRequest} className="flex items-center gap-1 text-blue-200 hover:text-white transition-colors">
@@ -812,24 +799,47 @@ function App() {
       <div className="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl overflow-hidden">
         
         {/* MODALS */}
-        {showCustomLogModal && <CustomLogModal onClose={() => setShowCustomLogModal(false)} onSave={handleSaveCustomLog} />}
+        <CustomLogModal isOpen={showCustomLogModal} onClose={() => setShowCustomLogModal(false)} onSave={handleSaveCustomLog} />
         
-        {analysisExercise && <ExerciseAnalysisModal onClose={() => setAnalysisExercise(null)} exerciseName={analysisExercise} history={history} />}
+        <ExerciseAnalysisModal 
+            isOpen={!!analysisExercise} 
+            onClose={() => setAnalysisExercise(null)} 
+            exerciseName={analysisExercise} 
+            history={history} 
+        />
 
-        {activePromptModal === 'system' && <PromptModal onClose={() => setActivePromptModal(null)} title="Coach Philosophie" icon={FileText} colorClass="bg-gradient-to-r from-blue-600 to-indigo-700" currentPrompt={systemPrompt} onSave={handleSaveSystemPrompt} />}
-        {activePromptModal === 'warmup' && <PromptModal onClose={() => setActivePromptModal(null)} title="Warm-up Prompt" icon={Zap} colorClass="bg-gradient-to-r from-orange-500 to-red-600" currentPrompt={warmupPrompt} onSave={handleSaveWarmupPrompt} />}
-        {activePromptModal === 'cooldown' && <PromptModal onClose={() => setActivePromptModal(null)} title="Cool Down Prompt" icon={Wind} colorClass="bg-gradient-to-r from-teal-500 to-cyan-600" currentPrompt={cooldownPrompt} onSave={handleSaveCooldownPrompt} />}
+        {/* MODALS FÜR PROMPTS */}
+        <PromptModal isOpen={activePromptModal === 'system'} onClose={() => setActivePromptModal(null)} title="Coach Philosophie" icon={FileText} colorClass="bg-gradient-to-r from-blue-600 to-indigo-700" currentPrompt={systemPrompt} onSave={handleSaveSystemPrompt} />
+        <PromptModal isOpen={activePromptModal === 'warmup'} onClose={() => setActivePromptModal(null)} title="Warm-up Prompt" icon={Zap} colorClass="bg-gradient-to-r from-orange-500 to-red-600" currentPrompt={warmupPrompt} onSave={handleSaveWarmupPrompt} />
+        <PromptModal isOpen={activePromptModal === 'cooldown'} onClose={() => setActivePromptModal(null)} title="Cool Down Prompt" icon={Wind} colorClass="bg-gradient-to-r from-teal-500 to-cyan-600" currentPrompt={cooldownPrompt} onSave={handleSaveCooldownPrompt} />
         
-        {activePromptModal === 'editPlan' && <PromptModal onClose={() => setActivePromptModal(null)} title="Plan Prompt bearbeiten" icon={Sparkles} colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" currentPrompt={planPrompt} onSave={handleSavePlanPrompt} />}
+        <PromptModal 
+            isOpen={activePromptModal === 'editPlan'} 
+            onClose={() => setActivePromptModal(null)} 
+            title="Plan Prompt bearbeiten" 
+            icon={Sparkles} 
+            colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" 
+            currentPrompt={planPrompt} 
+            onSave={handleSavePlanPrompt} 
+        />
 
-        {activePromptModal === 'plan' && <PromptModal onClose={() => setActivePromptModal(null)} title="Plan erstellen" icon={Sparkles} colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" currentPrompt={planPrompt} onSave={handleSavePlanPrompt} appendEquipment={true} equipment={equipment} appendHistory={true} history={history} />}
+        <PromptModal 
+            isOpen={activePromptModal === 'plan'} 
+            onClose={() => setActivePromptModal(null)} 
+            title="Plan erstellen" 
+            icon={Sparkles} 
+            colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" 
+            currentPrompt={planPrompt} 
+            onSave={handleSavePlanPrompt} 
+            appendEquipment={true} 
+            equipment={equipment} 
+            appendHistory={true} 
+            history={history} 
+        />
 
-        {showEquipmentModal && <EquipmentModal onClose={() => setShowEquipmentModal(false)} equipment={equipment} onSave={handleSaveEquipment} />}
+        <EquipmentModal isOpen={showEquipmentModal} onClose={() => setShowEquipmentModal(false)} equipment={equipment} onSave={handleSaveEquipment} />
+        <PastePlanModal isOpen={showPastePlanModal} onClose={() => setShowPastePlanModal(false)} onImport={handlePasteImport} />
         
-        {showPastePlanModal && <PastePlanModal onClose={() => setShowPastePlanModal(false)} onImport={handlePasteImport} />}
-        
-        {showExitDialog && <ExitDialog onSave={handleExitSave} onDiscard={handleExitDiscard} onCancel={handleExitCancel} />}
-
         {previewWorkout && (
            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
               <div className="bg-white rounded-3xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-2xl animate-in zoom-in-95">
@@ -851,7 +861,7 @@ function App() {
                  <div className="flex justify-center items-center">
                      <div>
                         <h1 className="text-5xl font-black tracking-tighter text-white text-center">
-                           Coach Andy
+                            Coach Andy
                         </h1>
                      </div>
                  </div>
@@ -861,29 +871,27 @@ function App() {
                      <div className="bg-white p-4 rounded-3xl shadow-md border border-gray-100 flex flex-col justify-center items-center"><Trophy className="text-yellow-500 mb-2 drop-shadow-sm" size={28} /><span className="text-3xl font-black text-gray-900 leading-none">{getStats().total}</span><span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">Total Workouts</span></div>
                      <div className="bg-white p-4 rounded-3xl shadow-md border border-gray-100 flex flex-col justify-center items-center"><Flame className="text-orange-500 mb-2 drop-shadow-sm" size={28} /><span className="text-3xl font-black text-gray-900 leading-none">{getStreakStats().currentStreak}</span><span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">Tage Streak</span></div>
                 </div>
-                
-                <div className="bg-slate-900 rounded-3xl p-6 relative overflow-hidden text-white shadow-xl flex flex-col items-center justify-between gap-3 h-auto">
+                <div className="bg-slate-900 rounded-3xl p-6 relative overflow-hidden text-white shadow-xl flex flex-col items-center justify-between gap-3">
                    <Cloud className="absolute -left-4 -bottom-4 text-white opacity-5 w-32 h-32" />
                    <div className="relative z-10 w-full flex justify-between items-center">
                      <div><div className="flex items-center gap-2 mb-1"><Database size={20} className="text-blue-400" /><h3 className="font-bold text-lg">Cloud Sync</h3></div><p className="text-xs text-gray-400">Backup & Restore</p></div>
-                     <div className="flex gap-2">
-                        <button onClick={handleExport} className="p-3 bg-blue-600 rounded-xl hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/50" title="Backup Datei erstellen"><Download size={20} /></button>
-                        <div className="relative"><input type="file" accept=".json" ref={fileInputRef} onChange={handleImport} className="hidden" /><button onClick={() => fileInputRef.current?.click()} className="p-3 bg-gray-700 rounded-xl hover:bg-gray-600 transition-colors border border-gray-600" title="Datei importieren"><Upload size={20} /></button></div>
-                        <button onClick={() => setShowPastePlanModal(true)} className="p-3 bg-emerald-600 rounded-xl hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-900/50" title="Plan Text einfügen"><ClipboardCheck size={20} /></button>
-                     </div>
+                     <div className="flex gap-2"><button onClick={handleExport} className="p-3 bg-blue-600 rounded-xl hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/50" title="Backup Datei erstellen"><Download size={20} /></button><div className="relative"><input type="file" accept=".json" ref={fileInputRef} onChange={handleImport} className="hidden" /><button onClick={() => fileInputRef.current?.click()} className="p-3 bg-gray-700 rounded-xl hover:bg-gray-600 transition-colors border border-gray-600" title="Datei importieren"><Upload size={20} /></button></div><button onClick={() => setShowPastePlanModal(true)} className="p-3 bg-emerald-600 rounded-xl hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-900/50" title="Plan Text einfügen"><ClipboardCheck size={20} /></button></div>
                    </div>
                    <button onClick={() => setShowCustomLogModal(true)} className="relative z-10 w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors border border-white/10">
                       <PlusCircle size={18} /> Freies Training eintragen
                    </button>
                 </div>
-
                 <div onClick={() => setActivePromptModal('plan')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-blue-50 text-blue-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Neuer 4-Wochen-Plan</h3><p className="text-xs text-gray-500">Erstelle einen neuen Plan mit KI</p></div></div><div className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-3 rounded-xl shadow-md"><ChevronRight size={20} /></div></div>
                 <div onClick={() => setShowEquipmentModal(true)} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Package size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Mein Equipment</h3><p className="text-xs text-gray-500">Verfügbares Trainingsgerät</p></div></div><ChevronRight className="text-gray-300" /></div>
+                
+                {/* SETTINGS LISTE */}
                 <div onClick={() => setActivePromptModal('system')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-blue-100 text-blue-600 p-2 rounded-xl"><FileText size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Coach Philosophie</h3><p className="text-xs text-gray-500">Identität & Regeln definieren</p></div></div><ChevronRight className="text-gray-300" /></div>
+                
+                {/* HIER: DER GEÄNDERTE EINTRAG FÜR PLAN SETTINGS (Mode 'editPlan' statt 'plan') */}
                 <div onClick={() => setActivePromptModal('editPlan')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Plan Generator Prompt</h3><p className="text-xs text-gray-500">KI-Anweisung für Pläne</p></div></div><ChevronRight className="text-gray-300" /></div>
+
                 <div onClick={() => setActivePromptModal('warmup')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-orange-100 text-orange-600 p-2 rounded-xl"><Zap size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Warm-up Prompt</h3><p className="text-xs text-gray-500">Aufwärm-Routine anpassen</p></div></div><ChevronRight className="text-gray-300" /></div>
                 <div onClick={() => setActivePromptModal('cooldown')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-teal-100 text-teal-600 p-2 rounded-xl"><Wind size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Cool Down Prompt</h3><p className="text-xs text-gray-500">Regeneration anpassen</p></div></div><ChevronRight className="text-gray-300" /></div>
-                
                 <div className="pt-6 pb-4 flex flex-col gap-3 items-center border-t border-gray-200 mt-4"><button onClick={handleClearPlan} className="text-orange-400 text-xs font-bold flex items-center gap-1 hover:text-orange-600 transition-colors"><AlertTriangle size={12} /> Nur Plan löschen (Verlauf behalten)</button><button onClick={handleReset} className="text-red-400 text-xs font-bold flex items-center gap-1 hover:text-red-600 transition-colors"><Trash2 size={12} /> Alles zurücksetzen (Hard Reset)</button></div>
               </div>
             </>
@@ -946,6 +954,7 @@ function App() {
                     {selectedHistoryEntry.snapshot?.exercises.map((ex: any, i: number) => (
                         <div key={i} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 opacity-90">
                             <div className="border-b border-gray-100 pb-2 mb-2">
+                                {/* HIER: KLICKBARER NAME IM VERLAUF */}
                                 <h3 onClick={() => setAnalysisExercise(ex.name)} className="font-bold text-lg text-blue-700 cursor-pointer hover:underline decoration-blue-300 flex items-center gap-2">
                                     {ex.name} <TrendingUp size={16} className="text-blue-300"/>
                                 </h3>
