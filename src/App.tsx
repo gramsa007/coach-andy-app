@@ -8,7 +8,7 @@ import {
   Eye, X, BarChart3, FileSpreadsheet, PlusCircle, PenTool, Youtube, TrendingUp, Calendar, Copy
 } from 'lucide-react';
 
-// Imports utils (diese Dateien existieren und funktionieren)
+// Imports utils
 import { playBeep } from './utils/audio';
 import { prepareData, formatTime, formatDate } from './utils/helpers';
 import { 
@@ -20,7 +20,7 @@ import {
     rawWorkouts 
 } from './utils/constants';
 
-// --- ALLE KOMPONENTEN JETZT HIER (Damit keine Verknüpfungsfehler passieren) ---
+// --- COMPONENTS ---
 
 const WorkoutTimer = ({ transparent = false, initialTime = 0 }: { transparent?: boolean, initialTime?: number }) => {
   const [seconds, setSeconds] = useState(initialTime);
@@ -85,158 +85,24 @@ const CooldownScreen = ({ prompt, onComplete }: any) => {
     );
 };
 
-// FIX: EquipmentModal direkt hier definiert, damit es sicher lädt
-const EquipmentModal = ({ isOpen, onClose, equipment, onSave }: any) => {
-    const [items, setItems] = useState<string[]>([]);
-    const [newItem, setNewItem] = useState("");
-    
-    // Initialisierung sicherstellen
-    useEffect(() => { 
-        if (isOpen && equipment && Array.isArray(equipment)) {
-            setItems(equipment);
-        } else if (isOpen && !equipment) {
-            setItems([]);
-        }
-    }, [isOpen, equipment]);
-
-    if (!isOpen) return null;
-    
-    const add = () => { if (newItem.trim()) { setItems([...items, newItem.trim()]); setNewItem(""); }};
-    const remove = (idx: number) => { setItems(items.filter((_, i) => i !== idx)); };
-    const save = () => { onSave(items); onClose(); };
-    
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-3xl w-full max-w-sm flex flex-col max-h-[80vh] shadow-2xl animate-in zoom-in-95">
-                <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl">
-                    <h2 className="text-xl font-black text-gray-800">Mein Equipment</h2>
-                    <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20} className="text-gray-500"/></button>
-                </div>
-                <div className="p-4 overflow-y-auto flex-1 space-y-2 bg-white">
-                    {items.length === 0 && <p className="text-center text-gray-400 text-sm py-4">Noch kein Equipment eingetragen.</p>}
-                    {items.map((item, i) => (<div key={i} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100"><span className="font-medium text-gray-700">{item}</span><button onClick={() => remove(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={18}/></button></div>))}
-                </div>
-                <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-3xl space-y-3">
-                    <div className="flex gap-2"><input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Neues Gerät (z.B. Kettlebell)" className="flex-1 border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-500" /><button onClick={add} className="bg-indigo-600 text-white p-2 rounded-xl"><PlusCircle size={20}/></button></div>
-                    <button onClick={save} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg">Speichern</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const PastePlanModal = ({ isOpen, onClose, onImport }: any) => {
-    const [text, setText] = useState("");
-    if (!isOpen) return null;
-    const handleImport = () => { try { const json = JSON.parse(text); onImport(json); onClose(); setText(""); } catch (e) { alert("Ungültiges JSON Format!"); }};
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95">
-                <div className="bg-emerald-600 p-4 text-white flex justify-between items-center"><h2 className="font-bold text-lg flex items-center gap-2"><ClipboardCheck/> Plan importieren</h2><button onClick={onClose}><X/></button></div>
-                <div className="p-4"><p className="text-xs text-gray-500 mb-2">Füge hier den JSON-Code von ChatGPT ein:</p><textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full h-40 p-3 border border-gray-200 rounded-xl text-xs font-mono bg-gray-50 outline-none resize-none" placeholder='[ { "id": 1, "title": "Push A", ... } ]'></textarea><button onClick={handleImport} className="w-full mt-4 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md">Plan laden</button></div>
-            </div>
-        </div>
-    );
-};
-
-const ExitDialog = ({ isOpen, onSave, onDiscard, onCancel }: any) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-3xl w-full max-w-xs shadow-2xl p-6 animate-in zoom-in-95">
-                <div className="flex flex-col items-center text-center mb-6"><div className="w-12 h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-3"><AlertTriangle size={24} /></div><h3 className="text-lg font-black text-gray-900">Training verlassen?</h3><p className="text-sm text-gray-500 mt-1">Dein Fortschritt wird lokal gespeichert.</p></div>
-                <div className="space-y-2"><button onClick={onSave} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">Speichern & Beenden</button><button onClick={onDiscard} className="w-full bg-white border border-gray-200 text-red-500 font-bold py-3 rounded-xl hover:bg-red-50">Verwerfen</button><button onClick={onCancel} className="w-full text-gray-400 font-bold py-2 text-sm">Abbrechen</button></div>
-            </div>
-        </div>
-    );
-};
-
-const CustomLogModal = ({ isOpen, onClose, onSave }: any) => {
-  const [title, setTitle] = useState("");
-  const [duration, setDuration] = useState("");
-  const [note, setNote] = useState("");
-
-  if (!isOpen) return null;
-
-  const handleSubmit = () => {
-    if (!title) return alert("Bitte gib einen Titel ein.");
-    onSave(title, duration, note);
-    setTitle("");
-    setDuration("");
-    setNote("");
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 animate-in zoom-in-95">
-        <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2"><PenTool size={20} className="text-blue-600"/> Freies Training</h2>
-        <div className="space-y-4">
-          <div><label className="text-xs font-bold text-gray-500 uppercase">Aktivität</label><input type="text" placeholder="z.B. Laufen, Radfahren, Yoga" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-900 focus:border-blue-500 outline-none"/></div>
-          <div><label className="text-xs font-bold text-gray-500 uppercase">Dauer (Minuten)</label><input type="text" placeholder="z.B. 40" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-900 focus:border-blue-500 outline-none"/></div>
-          <div><label className="text-xs font-bold text-gray-500 uppercase">Details / Distanz</label><textarea placeholder="z.B. 8 km, lockeres Tempo" value={note} onChange={(e) => setNote(e.target.value)} className="w-full border border-gray-200 rounded-xl p-3 font-medium text-gray-700 focus:border-blue-500 outline-none h-24 resize-none"/></div>
-          <button onClick={handleSubmit} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-transform">Speichern</button>
-          <button onClick={onClose} className="w-full text-gray-400 font-bold py-2 text-sm hover:text-gray-600">Abbrechen</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ExerciseAnalysisModal = ({ isOpen, onClose, exerciseName, history }: any) => {
-  if (!isOpen || !exerciseName) return null;
-
-  const dataPoints = history.map((h: any) => {
-      if (!h.snapshot || !h.snapshot.exercises) return null;
-      const ex = h.snapshot.exercises.find((e: any) => e.name === exerciseName);
-      if (!ex) return null;
-      const bestWeight = ex.logs.reduce((max: number, log: any) => {
-          const w = parseFloat(log.weight) || 0;
-          return w > max && log.completed ? w : max;
-      }, 0);
-      if (bestWeight === 0) return null;
-      return { date: new Date(h.date), dateLabel: new Date(h.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' }), weight: bestWeight };
-  }).filter(Boolean).reverse(); 
-
-  const hasData = dataPoints.length > 0;
-  const maxWeight = hasData ? Math.max(...dataPoints.map((d: any) => d.weight)) : 0;
-  const minWeight = hasData ? Math.min(...dataPoints.map((d: any) => d.weight)) : 0;
-  const chartHeight = 150; const chartWidth = 300; const padding = 20;
-  const getY = (weight: number) => { if (maxWeight === minWeight) return chartHeight / 2; return chartHeight - padding - ((weight - minWeight) / (maxWeight - minWeight)) * (chartHeight - (padding * 2)); };
-  const getPoints = () => { if (dataPoints.length === 1) return `0,${getY(dataPoints[0].weight)} ${chartWidth},${getY(dataPoints[0].weight)}`; return dataPoints.map((d: any, i: number) => { const x = (i / (dataPoints.length - 1)) * chartWidth; const y = getY(d.weight); return `${x},${y}`; }).join(" "); };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-0 overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[80vh]">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white flex justify-between items-center shrink-0"><div><p className="text-blue-200 text-xs font-bold uppercase tracking-wider mb-1">Fortschritts-Analyse</p><h2 className="text-xl font-black leading-none">{exerciseName}</h2></div><button onClick={onClose} className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors"><X size={20}/></button></div>
-        <div className="p-5 overflow-y-auto">{!hasData ? (<div className="text-center text-gray-400 py-10"><BarChart3 className="mx-auto mb-2 opacity-50" size={48}/><p>Noch keine Daten für diese Übung.</p></div>) : (<><div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 shadow-inner relative"><div className="flex justify-between text-xs text-gray-400 font-bold mb-2"><span>{minWeight} kg</span><span>MAX: {maxWeight} kg</span></div><svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-32 overflow-visible"><line x1="0" y1={padding} x2={chartWidth} y2={padding} stroke="#e5e7eb" strokeDasharray="4"/><line x1="0" y1={chartHeight/2} x2={chartWidth} y2={chartHeight/2} stroke="#e5e7eb" strokeDasharray="4"/><line x1="0" y1={chartHeight-padding} x2={chartWidth} y2={chartHeight-padding} stroke="#e5e7eb" strokeDasharray="4"/><polyline fill="none" stroke="#2563eb" strokeWidth="3" points={getPoints()} strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-md"/>{dataPoints.map((d: any, i: number) => (<circle key={i} cx={(i / (dataPoints.length - 1 || 1)) * chartWidth} cy={getY(d.weight)} r="4" className="fill-white stroke-blue-600 stroke-2"/>))}</svg><div className="flex justify-between text-[10px] text-gray-400 font-bold mt-2 uppercase tracking-wider"><span>{dataPoints[0].dateLabel}</span><span>{dataPoints[dataPoints.length - 1].dateLabel}</span></div></div><h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm"><History size={16} className="text-blue-600"/> Historie (Best Sets)</h3><div className="space-y-2">{[...dataPoints].reverse().map((d: any, i: number) => (<div key={i} className="flex justify-between items-center p-3 bg-white border border-gray-100 rounded-xl shadow-sm"><div className="flex items-center gap-3"><div className="bg-blue-50 text-blue-600 p-2 rounded-lg"><Calendar size={14}/></div><span className="text-sm font-bold text-gray-700">{d.dateLabel}</span></div><span className="text-lg font-black text-gray-900">{d.weight} <span className="text-xs font-normal text-gray-400">kg</span></span></div>))}</div></>)}</div>
-      </div>
-    </div>
-  );
-};
-
-// --- PROMPT MODAL MIT COPY FIX ---
-const PromptModal = ({ isOpen, onClose, title, icon: Icon, colorClass, currentPrompt, onSave, appendEquipment, equipment, appendHistory, history }: any) => {
+const PromptModal = ({ onClose, title, icon: Icon, colorClass, currentPrompt, onSave, appendEquipment, equipment, appendHistory, history }: any) => {
     const [text, setText] = useState(currentPrompt);
     
+    // Initialisierung beim Mounten (jedes Mal frisch)
     useEffect(() => {
-        if (isOpen) {
-            let generatedText = currentPrompt;
-            if (appendEquipment && equipment) {
-                generatedText += `\n\nVerfügbares Equipment:\n` + equipment.join(', ');
-            }
-            if (appendHistory && history) {
-                const recentHistory = history.slice(0, 10).map((h: any) => 
-                    `${new Date(h.date).toLocaleDateString()}: ${h.workoutTitle} (${h.type})`
-                ).join('\n');
-                generatedText += `\n\nTrainingshistorie (letzte Einheiten):\n` + recentHistory;
-            }
-            setText(generatedText);
+        let generatedText = currentPrompt;
+        if (appendEquipment && equipment) {
+            generatedText += `\n\nVerfügbares Equipment:\n` + equipment.join(', ');
         }
-    }, [isOpen, currentPrompt, appendEquipment, equipment, appendHistory, history]);
+        if (appendHistory && history) {
+            const recentHistory = history.slice(0, 10).map((h: any) => 
+                `${new Date(h.date).toLocaleDateString()}: ${h.workoutTitle} (${h.type})`
+            ).join('\n');
+            generatedText += `\n\nTrainingshistorie (letzte Einheiten):\n` + recentHistory;
+        }
+        setText(generatedText);
+    }, [currentPrompt, appendEquipment, equipment, appendHistory, history]);
 
-    if (!isOpen) return null;
-    
     const handleCopy = () => {
         navigator.clipboard.writeText(text);
         alert("In Zwischenablage kopiert!");
@@ -270,6 +136,125 @@ const PromptModal = ({ isOpen, onClose, title, icon: Icon, colorClass, currentPr
     );
 };
 
+const EquipmentModal = ({ onClose, equipment, onSave }: any) => {
+    const [items, setItems] = useState<string[]>([]);
+    const [newItem, setNewItem] = useState("");
+    
+    // Initialisierung beim Mounten
+    useEffect(() => { 
+        if (equipment && Array.isArray(equipment)) {
+            setItems([...equipment]);
+        }
+    }, [equipment]);
+
+    const add = () => { if (newItem.trim()) { setItems([...items, newItem.trim()]); setNewItem(""); }};
+    const remove = (idx: number) => { setItems(items.filter((_, i) => i !== idx)); };
+    const save = () => { onSave(items); onClose(); };
+    
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-3xl w-full max-w-sm flex flex-col max-h-[80vh] shadow-2xl animate-in zoom-in-95">
+                <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-3xl">
+                    <h2 className="text-xl font-black text-gray-800">Mein Equipment</h2>
+                    <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"><X size={20} className="text-gray-500"/></button>
+                </div>
+                <div className="p-4 overflow-y-auto flex-1 space-y-2 bg-white">
+                    {items.length === 0 && <p className="text-center text-gray-400 text-sm py-4">Noch kein Equipment eingetragen.</p>}
+                    {items.map((item, i) => (<div key={i} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100"><span className="font-medium text-gray-700">{item}</span><button onClick={() => remove(i)} className="text-gray-400 hover:text-red-500"><Trash2 size={18}/></button></div>))}
+                </div>
+                <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-3xl space-y-3">
+                    <div className="flex gap-2"><input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Neues Gerät (z.B. Kettlebell)" className="flex-1 border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-500" /><button onClick={add} className="bg-indigo-600 text-white p-2 rounded-xl"><PlusCircle size={20}/></button></div>
+                    <button onClick={save} className="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg">Speichern</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const PastePlanModal = ({ onClose, onImport }: any) => {
+    const [text, setText] = useState("");
+    const handleImport = () => { try { const json = JSON.parse(text); onImport(json); onClose(); setText(""); } catch (e) { alert("Ungültiges JSON Format!"); }};
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95">
+                <div className="bg-emerald-600 p-4 text-white flex justify-between items-center"><h2 className="font-bold text-lg flex items-center gap-2"><ClipboardCheck/> Plan importieren</h2><button onClick={onClose}><X/></button></div>
+                <div className="p-4"><p className="text-xs text-gray-500 mb-2">Füge hier den JSON-Code von ChatGPT ein:</p><textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full h-40 p-3 border border-gray-200 rounded-xl text-xs font-mono bg-gray-50 outline-none resize-none" placeholder='[ { "id": 1, "title": "Push A", ... } ]'></textarea><button onClick={handleImport} className="w-full mt-4 bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md">Plan laden</button></div>
+            </div>
+        </div>
+    );
+};
+
+const ExitDialog = ({ onSave, onDiscard, onCancel }: any) => {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-3xl w-full max-w-xs shadow-2xl p-6 animate-in zoom-in-95">
+                <div className="flex flex-col items-center text-center mb-6"><div className="w-12 h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mb-3"><AlertTriangle size={24} /></div><h3 className="text-lg font-black text-gray-900">Training verlassen?</h3><p className="text-sm text-gray-500 mt-1">Dein Fortschritt wird lokal gespeichert.</p></div>
+                <div className="space-y-2"><button onClick={onSave} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">Speichern & Beenden</button><button onClick={onDiscard} className="w-full bg-white border border-gray-200 text-red-500 font-bold py-3 rounded-xl hover:bg-red-50">Verwerfen</button><button onClick={onCancel} className="w-full text-gray-400 font-bold py-2 text-sm">Abbrechen</button></div>
+            </div>
+        </div>
+    );
+};
+
+const CustomLogModal = ({ onClose, onSave }: any) => {
+  const [title, setTitle] = useState("");
+  const [duration, setDuration] = useState("");
+  const [note, setNote] = useState("");
+
+  const handleSubmit = () => {
+    if (!title) return alert("Bitte gib einen Titel ein.");
+    onSave(title, duration, note);
+    setTitle("");
+    setDuration("");
+    setNote("");
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6 animate-in zoom-in-95">
+        <h2 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2"><PenTool size={20} className="text-blue-600"/> Freies Training</h2>
+        <div className="space-y-4">
+          <div><label className="text-xs font-bold text-gray-500 uppercase">Aktivität</label><input type="text" placeholder="z.B. Laufen, Radfahren, Yoga" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-900 focus:border-blue-500 outline-none"/></div>
+          <div><label className="text-xs font-bold text-gray-500 uppercase">Dauer (Minuten)</label><input type="text" placeholder="z.B. 40" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full border border-gray-200 rounded-xl p-3 font-bold text-gray-900 focus:border-blue-500 outline-none"/></div>
+          <div><label className="text-xs font-bold text-gray-500 uppercase">Details / Distanz</label><textarea placeholder="z.B. 8 km, lockeres Tempo" value={note} onChange={(e) => setNote(e.target.value)} className="w-full border border-gray-200 rounded-xl p-3 font-medium text-gray-700 focus:border-blue-500 outline-none h-24 resize-none"/></div>
+          <button onClick={handleSubmit} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-200 active:scale-95 transition-transform">Speichern</button>
+          <button onClick={onClose} className="w-full text-gray-400 font-bold py-2 text-sm hover:text-gray-600">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ExerciseAnalysisModal = ({ onClose, exerciseName, history }: any) => {
+  const dataPoints = history.map((h: any) => {
+      if (!h.snapshot || !h.snapshot.exercises) return null;
+      const ex = h.snapshot.exercises.find((e: any) => e.name === exerciseName);
+      if (!ex) return null;
+      const bestWeight = ex.logs.reduce((max: number, log: any) => {
+          const w = parseFloat(log.weight) || 0;
+          return w > max && log.completed ? w : max;
+      }, 0);
+      if (bestWeight === 0) return null;
+      return { date: new Date(h.date), dateLabel: new Date(h.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' }), weight: bestWeight };
+  }).filter(Boolean).reverse(); 
+
+  const hasData = dataPoints.length > 0;
+  const maxWeight = hasData ? Math.max(...dataPoints.map((d: any) => d.weight)) : 0;
+  const minWeight = hasData ? Math.min(...dataPoints.map((d: any) => d.weight)) : 0;
+  const chartHeight = 150; const chartWidth = 300; const padding = 20;
+  const getY = (weight: number) => { if (maxWeight === minWeight) return chartHeight / 2; return chartHeight - padding - ((weight - minWeight) / (maxWeight - minWeight)) * (chartHeight - (padding * 2)); };
+  const getPoints = () => { if (dataPoints.length === 1) return `0,${getY(dataPoints[0].weight)} ${chartWidth},${getY(dataPoints[0].weight)}`; return dataPoints.map((d: any, i: number) => { const x = (i / (dataPoints.length - 1)) * chartWidth; const y = getY(d.weight); return `${x},${y}`; }).join(" "); };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-0 overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[80vh]">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 text-white flex justify-between items-center shrink-0"><div><p className="text-blue-200 text-xs font-bold uppercase tracking-wider mb-1">Fortschritts-Analyse</p><h2 className="text-xl font-black leading-none">{exerciseName}</h2></div><button onClick={onClose} className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors"><X size={20}/></button></div>
+        <div className="p-5 overflow-y-auto">{!hasData ? (<div className="text-center text-gray-400 py-10"><BarChart3 className="mx-auto mb-2 opacity-50" size={48}/><p>Noch keine Daten für diese Übung.</p></div>) : (<><div className="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 shadow-inner relative"><div className="flex justify-between text-xs text-gray-400 font-bold mb-2"><span>{minWeight} kg</span><span>MAX: {maxWeight} kg</span></div><svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-32 overflow-visible"><line x1="0" y1={padding} x2={chartWidth} y2={padding} stroke="#e5e7eb" strokeDasharray="4"/><line x1="0" y1={chartHeight/2} x2={chartWidth} y2={chartHeight/2} stroke="#e5e7eb" strokeDasharray="4"/><line x1="0" y1={chartHeight-padding} x2={chartWidth} y2={chartHeight-padding} stroke="#e5e7eb" strokeDasharray="4"/><polyline fill="none" stroke="#2563eb" strokeWidth="3" points={getPoints()} strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-md"/>{dataPoints.map((d: any, i: number) => (<circle key={i} cx={(i / (dataPoints.length - 1 || 1)) * chartWidth} cy={getY(d.weight)} r="4" className="fill-white stroke-blue-600 stroke-2"/>))}</svg><div className="flex justify-between text-[10px] text-gray-400 font-bold mt-2 uppercase tracking-wider"><span>{dataPoints[0].dateLabel}</span><span>{dataPoints[dataPoints.length - 1].dateLabel}</span></div></div><h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2 text-sm"><History size={16} className="text-blue-600"/> Historie (Best Sets)</h3><div className="space-y-2">{[...dataPoints].reverse().map((d: any, i: number) => (<div key={i} className="flex justify-between items-center p-3 bg-white border border-gray-100 rounded-xl shadow-sm"><div className="flex items-center gap-3"><div className="bg-blue-50 text-blue-600 p-2 rounded-lg"><Calendar size={14}/></div><span className="text-sm font-bold text-gray-700">{d.dateLabel}</span></div><span className="text-lg font-black text-gray-900">{d.weight} <span className="text-xs font-normal text-gray-400">kg</span></span></div>))}</div></>)}</div>
+      </div>
+    </div>
+  );
+};
+
 // --- HELPER FUNCTIONS ---
 const getStaticWarmup = (focus: string) => {
   const focusLower = focus?.toLowerCase() || "";
@@ -295,11 +280,12 @@ function App() {
 
   const [currentWarmupRoutine, setCurrentWarmupRoutine] = useState("");
   const [currentCooldownRoutine, setCurrentCooldownRoutine] = useState("");
+  
+  // States für Modals
   const [showCustomLogModal, setShowCustomLogModal] = useState(false);
   const [showEquipmentModal, setShowEquipmentModal] = useState(false);
   const [showPastePlanModal, setShowPastePlanModal] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
-  
   const [activePromptModal, setActivePromptModal] = useState<string | null>(null); 
   const [analysisExercise, setAnalysisExercise] = useState<string | null>(null);
 
@@ -408,11 +394,9 @@ function App() {
   };
 
   const [activeWorkoutData, setActiveWorkoutData] = useState<any>(null);
-  
   const [isWarmupActive, setIsWarmupActive] = useState(false);
   const [isCooldownActive, setIsCooldownActive] = useState(false); 
   const [elapsedWarmupTime, setElapsedWarmupTime] = useState(0); 
-  
   const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<any>(null); 
 
   const [restSeconds, setRestSeconds] = useState(0); 
@@ -468,17 +452,6 @@ function App() {
     }
     return () => clearInterval(interval);
   }, [isRestActive]);
-
-  const getStats = () => {
-    const total = history.length;
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1); 
-    const monday = new Date(now.setDate(diff));
-    monday.setHours(0,0,0,0);
-    const thisWeek = history.filter((h: any) => new Date(h.date) >= monday).length;
-    return { total, thisWeek };
-  };
 
   const handleCSVExport = () => {
       if (history.length === 0) {
@@ -739,7 +712,8 @@ function App() {
             {ExitDialogComponent}
             <WarmupScreen 
                 prompt={currentWarmupRoutine} 
-                onComplete={(elapsed) => { setElapsedWarmupTime(elapsed); setIsWarmupActive(false); }}
+                // FIX: TYPE ERROR - elapsed is implicitly any. Fixed by casting to number.
+                onComplete={(elapsed: number) => { setElapsedWarmupTime(elapsed); setIsWarmupActive(false); }}
                 onBack={handleBackRequest}
             />
           </>
@@ -760,12 +734,9 @@ function App() {
       <div className="min-h-screen bg-neutral-900 flex justify-center font-sans">
         <div className="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl overflow-hidden">
           {ExitDialogComponent}
-          <ExerciseAnalysisModal 
-            isOpen={!!analysisExercise} 
-            onClose={() => setAnalysisExercise(null)} 
-            exerciseName={analysisExercise} 
-            history={history} 
-          />
+          {/* FIX: CONDITIONAL RENDERING FOR MODALS */}
+          {analysisExercise && <ExerciseAnalysisModal onClose={() => setAnalysisExercise(null)} exerciseName={analysisExercise} history={history} />}
+          
           <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-2 px-4 sticky top-0 z-10 shadow-lg">
             <div className="flex justify-between items-center">
               <button onClick={handleBackRequest} className="flex items-center gap-1 text-blue-200 hover:text-white transition-colors">
@@ -830,57 +801,29 @@ function App() {
       
       <div className="w-full max-w-md bg-gray-50 min-h-screen relative shadow-2xl overflow-hidden">
         
-        {/* MODALS - ALLE HIER OBEN */}
-        <CustomLogModal isOpen={showCustomLogModal} onClose={() => setShowCustomLogModal(false)} onSave={handleSaveCustomLog} />
+        {/* MODALS - ALLE HIER MIT KONDITIONALEM RENDERING (WICHTIG!) */}
+        {showCustomLogModal && <CustomLogModal onClose={() => setShowCustomLogModal(false)} onSave={handleSaveCustomLog} />}
         
-        <ExerciseAnalysisModal 
-            isOpen={!!analysisExercise} 
-            onClose={() => setAnalysisExercise(null)} 
-            exerciseName={analysisExercise} 
-            history={history} 
-        />
+        {analysisExercise && <ExerciseAnalysisModal onClose={() => setAnalysisExercise(null)} exerciseName={analysisExercise} history={history} />}
 
         {/* MODALS FÜR PROMPTS */}
-        <PromptModal isOpen={activePromptModal === 'system'} onClose={() => setActivePromptModal(null)} title="Coach Philosophie" icon={FileText} colorClass="bg-gradient-to-r from-blue-600 to-indigo-700" currentPrompt={systemPrompt} onSave={handleSaveSystemPrompt} />
-        <PromptModal isOpen={activePromptModal === 'warmup'} onClose={() => setActivePromptModal(null)} title="Warm-up Prompt" icon={Zap} colorClass="bg-gradient-to-r from-orange-500 to-red-600" currentPrompt={warmupPrompt} onSave={handleSaveWarmupPrompt} />
-        <PromptModal isOpen={activePromptModal === 'cooldown'} onClose={() => setActivePromptModal(null)} title="Cool Down Prompt" icon={Wind} colorClass="bg-gradient-to-r from-teal-500 to-cyan-600" currentPrompt={cooldownPrompt} onSave={handleSaveCooldownPrompt} />
+        {activePromptModal === 'system' && <PromptModal onClose={() => setActivePromptModal(null)} title="Coach Philosophie" icon={FileText} colorClass="bg-gradient-to-r from-blue-600 to-indigo-700" currentPrompt={systemPrompt} onSave={handleSaveSystemPrompt} />}
+        {activePromptModal === 'warmup' && <PromptModal onClose={() => setActivePromptModal(null)} title="Warm-up Prompt" icon={Zap} colorClass="bg-gradient-to-r from-orange-500 to-red-600" currentPrompt={warmupPrompt} onSave={handleSaveWarmupPrompt} />}
+        {activePromptModal === 'cooldown' && <PromptModal onClose={() => setActivePromptModal(null)} title="Cool Down Prompt" icon={Wind} colorClass="bg-gradient-to-r from-teal-500 to-cyan-600" currentPrompt={cooldownPrompt} onSave={handleSaveCooldownPrompt} />}
         
         {/* SETTINGS PROMPT */}
-        <PromptModal 
-            isOpen={activePromptModal === 'editPlan'} 
-            onClose={() => setActivePromptModal(null)} 
-            title="Plan Prompt bearbeiten" 
-            icon={Sparkles} 
-            colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" 
-            currentPrompt={planPrompt} 
-            onSave={handleSavePlanPrompt} 
-        />
+        {activePromptModal === 'editPlan' && <PromptModal onClose={() => setActivePromptModal(null)} title="Plan Prompt bearbeiten" icon={Sparkles} colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" currentPrompt={planPrompt} onSave={handleSavePlanPrompt} />}
 
         {/* GENERATOR PROMPT (Button oben) */}
-        <PromptModal 
-            isOpen={activePromptModal === 'plan'} 
-            onClose={() => setActivePromptModal(null)} 
-            title="Plan erstellen" 
-            icon={Sparkles} 
-            colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" 
-            currentPrompt={planPrompt} 
-            onSave={handleSavePlanPrompt} 
-            appendEquipment={true} 
-            equipment={equipment} 
-            appendHistory={true} 
-            history={history} 
-        />
+        {activePromptModal === 'plan' && <PromptModal onClose={() => setActivePromptModal(null)} title="Plan erstellen" icon={Sparkles} colorClass="bg-gradient-to-r from-blue-600 to-indigo-600" currentPrompt={planPrompt} onSave={handleSavePlanPrompt} appendEquipment={true} equipment={equipment} appendHistory={true} history={history} />}
 
         {/* EQUIPMENT MODAL - HIER SICHER PLATZIERT */}
-        <EquipmentModal 
-            isOpen={showEquipmentModal} 
-            onClose={() => setShowEquipmentModal(false)} 
-            equipment={equipment} 
-            onSave={handleSaveEquipment} 
-        />
+        {showEquipmentModal && <EquipmentModal onClose={() => setShowEquipmentModal(false)} equipment={equipment} onSave={handleSaveEquipment} />}
         
-        <PastePlanModal isOpen={showPastePlanModal} onClose={() => setShowPastePlanModal(false)} onImport={handlePasteImport} />
+        {showPastePlanModal && <PastePlanModal onClose={() => setShowPastePlanModal(false)} onImport={handlePasteImport} />}
         
+        {showExitDialog && <ExitDialog onSave={handleExitSave} onDiscard={handleExitDiscard} onCancel={handleExitCancel} />}
+
         {previewWorkout && (
            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
               <div className="bg-white rounded-3xl w-full max-w-sm max-h-[80vh] flex flex-col shadow-2xl animate-in zoom-in-95">
@@ -913,7 +856,7 @@ function App() {
                      <div className="bg-white p-4 rounded-3xl shadow-md border border-gray-100 flex flex-col justify-center items-center"><Flame className="text-orange-500 mb-2 drop-shadow-sm" size={28} /><span className="text-3xl font-black text-gray-900 leading-none">{getStreakStats().currentStreak}</span><span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-1">Tage Streak</span></div>
                 </div>
                 
-                {/* CLOUD SYNC BOX (REPARIERTES LAYOUT) */}
+                {/* CLOUD SYNC BOX */}
                 <div className="bg-slate-900 rounded-3xl p-6 relative overflow-hidden text-white shadow-xl flex flex-col items-center justify-between gap-3 h-auto">
                    <Cloud className="absolute -left-4 -bottom-4 text-white opacity-5 w-32 h-32" />
                    <div className="relative z-10 w-full flex justify-between items-center">
@@ -929,16 +872,14 @@ function App() {
                    </button>
                 </div>
 
-                <div onClick={() => setActivePromptModal('plan')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-blue-50 text-blue-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Neuer 4-Wochen-Plan</h3><p className="text-xs text-gray-500">Erstelle einen neuen Plan mit KI</p></div></div><div className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-3 rounded-xl shadow-md"><ChevronRight size={20} /></div></div>
-                <div onClick={() => setShowEquipmentModal(true)} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Package size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Mein Equipment</h3><p className="text-xs text-gray-500">Verfügbares Trainingsgerät</p></div></div><ChevronRight className="text-gray-300" /></div>
+                {/* MENÜ LISTE - JETZT MIT BUTTONS STATT DIVS */}
+                <button onClick={() => setActivePromptModal('plan')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-blue-50 text-blue-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Neuer 4-Wochen-Plan</h3><p className="text-xs text-gray-500">Erstelle einen neuen Plan mit KI</p></div></div><div className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white p-3 rounded-xl shadow-md"><ChevronRight size={20} /></div></button>
+                <button onClick={() => setShowEquipmentModal(true)} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Package size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Mein Equipment</h3><p className="text-xs text-gray-500">Verfügbares Trainingsgerät</p></div></div><ChevronRight className="text-gray-300" /></button>
+                <button onClick={() => setActivePromptModal('system')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-blue-100 text-blue-600 p-2 rounded-xl"><FileText size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Coach Philosophie</h3><p className="text-xs text-gray-500">Identität & Regeln definieren</p></div></div><ChevronRight className="text-gray-300" /></button>
+                <button onClick={() => setActivePromptModal('editPlan')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Plan Generator Prompt</h3><p className="text-xs text-gray-500">KI-Anweisung für Pläne</p></div></div><ChevronRight className="text-gray-300" /></button>
+                <button onClick={() => setActivePromptModal('warmup')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-orange-100 text-orange-600 p-2 rounded-xl"><Zap size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Warm-up Prompt</h3><p className="text-xs text-gray-500">Aufwärm-Routine anpassen</p></div></div><ChevronRight className="text-gray-300" /></button>
+                <button onClick={() => setActivePromptModal('cooldown')} className="w-full bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors text-left"><div className="flex items-center gap-3"><div className="bg-teal-100 text-teal-600 p-2 rounded-xl"><Wind size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Cool Down Prompt</h3><p className="text-xs text-gray-500">Regeneration anpassen</p></div></div><ChevronRight className="text-gray-300" /></button>
                 
-                {/* SETTINGS LISTE */}
-                <div onClick={() => setActivePromptModal('system')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-blue-100 text-blue-600 p-2 rounded-xl"><FileText size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Coach Philosophie</h3><p className="text-xs text-gray-500">Identität & Regeln definieren</p></div></div><ChevronRight className="text-gray-300" /></div>
-                
-                <div onClick={() => setActivePromptModal('editPlan')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-indigo-100 text-indigo-600 p-2 rounded-xl"><Sparkles size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Plan Generator Prompt</h3><p className="text-xs text-gray-500">KI-Anweisung für Pläne</p></div></div><ChevronRight className="text-gray-300" /></div>
-
-                <div onClick={() => setActivePromptModal('warmup')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-orange-100 text-orange-600 p-2 rounded-xl"><Zap size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Warm-up Prompt</h3><p className="text-xs text-gray-500">Aufwärm-Routine anpassen</p></div></div><ChevronRight className="text-gray-300" /></div>
-                <div onClick={() => setActivePromptModal('cooldown')} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"><div className="flex items-center gap-3"><div className="bg-teal-100 text-teal-600 p-2 rounded-xl"><Wind size={20} /></div><div><h3 className="font-bold text-lg text-gray-900">Cool Down Prompt</h3><p className="text-xs text-gray-500">Regeneration anpassen</p></div></div><ChevronRight className="text-gray-300" /></div>
                 <div className="pt-6 pb-4 flex flex-col gap-3 items-center border-t border-gray-200 mt-4"><button onClick={handleClearPlan} className="text-orange-400 text-xs font-bold flex items-center gap-1 hover:text-orange-600 transition-colors"><AlertTriangle size={12} /> Nur Plan löschen (Verlauf behalten)</button><button onClick={handleReset} className="text-red-400 text-xs font-bold flex items-center gap-1 hover:text-red-600 transition-colors"><Trash2 size={12} /> Alles zurücksetzen (Hard Reset)</button></div>
               </div>
             </>
@@ -1024,5 +965,5 @@ function App() {
     </div>
   );
 }
-
+1
 export default App;
